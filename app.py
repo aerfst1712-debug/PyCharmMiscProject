@@ -13,13 +13,10 @@ def get_db():
 
 def update_db_structure():
     conn = get_db()
-    # ตรวจสอบและเพิ่มคอลัมน์ stock
     try:
         conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
         pass
-
-    # ตรวจสอบและเพิ่มคอลัมน์ datasheet_url
     try:
         conn.execute("ALTER TABLE components ADD COLUMN datasheet_url TEXT")
     except sqlite3.OperationalError:
@@ -44,6 +41,30 @@ def home():
     conn.close()
 
     return render_template('index.html', products=products, is_admin=is_admin, search_query=search_query)
+
+
+# 🛠️ เส้นทางพิเศษสำหรับกดรีเซ็ตโครงสร้างตารางผ่านหน้าเว็บ
+@app.route('/reset_db')
+def reset_db():
+    conn = get_db()
+    conn.execute('DROP TABLE IF EXISTS components')
+    conn.execute('''
+                 CREATE TABLE components
+                 (
+                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                     name          TEXT NOT NULL,
+                     category      TEXT NOT NULL,
+                     price         TEXT NOT NULL,
+                     image_url     TEXT NOT NULL,
+                     description   TEXT NOT NULL,
+                     specs         TEXT NOT NULL,
+                     stock         INTEGER DEFAULT 0,
+                     datasheet_url TEXT
+                 )
+                 ''')
+    conn.commit()
+    conn.close()
+    return "ล้างฐานข้อมูลเก่าและอัปเกรดระบบคลัง 8 คอลัมน์เรียบร้อยแล้ว! กดกลับหน้าหลักได้เลย"
 
 
 @app.route('/update_stock/<int:product_id>/<string:action>')
