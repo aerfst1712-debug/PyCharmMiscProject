@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, abort
 import sqlite3
+import os
 
 app = Flask(__name__)
 DATABASE = 'electronics.db'
@@ -11,20 +12,26 @@ def get_db():
     return conn
 
 
-# ระบบอัปเกรดโครงสร้างฐานข้อมูลอัตโนมัติ
-def update_db_structure():
+# 🛠️ ฟังก์ชันสร้างตารางใหม่เอี่ยมแบบมีช่องข้อมูลครบถ้วน
+def init_clean_db():
     conn = get_db()
-    # ตรวจสอบและเพิ่มคอลัมน์ stock
-    try:
-        conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
-        pass  # ถ้ามีคอลัมน์อยู่แล้วให้ข้าม
-
-    # ตรวจสอบและเพิ่มคอลัมน์ datasheet_url
-    try:
-        conn.execute("ALTER TABLE components ADD COLUMN datasheet_url TEXT")
-    except sqlite3.OperationalError:
-        pass
+    # ลบตารางเก่าทิ้งชั่วคราวเพื่อรีเซ็ตโครงสร้าง
+    conn.execute('DROP TABLE IF EXISTS components')
+    # สร้างตารางใหม่ที่มีคอลัมน์ครบทั้งหมดในครั้งเดียว
+    conn.execute('''
+                 CREATE TABLE components
+                 (
+                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                     name          TEXT NOT NULL,
+                     category      TEXT NOT NULL,
+                     price         TEXT NOT NULL,
+                     image_url     TEXT NOT NULL,
+                     description   TEXT NOT NULL,
+                     specs         TEXT NOT NULL,
+                     stock         INTEGER DEFAULT 0,
+                     datasheet_url TEXT
+                 )
+                 ''')
     conn.commit()
     conn.close()
 
@@ -47,7 +54,6 @@ def home():
     return render_template('index.html', products=products, is_admin=is_admin, search_query=search_query)
 
 
-# ฟังก์ชันทางลัดสำหรับกดเพิ่ม/ลดสต็อกหน้าเว็บ
 @app.route('/update_stock/<int:product_id>/<string:action>')
 def update_stock(product_id, action):
     is_admin = request.args.get('admin') == 'true'
@@ -56,7 +62,6 @@ def update_stock(product_id, action):
     if action == 'increase':
         conn.execute('UPDATE components SET stock = stock + 1 WHERE id = ?', (product_id,))
     elif action == 'decrease':
-        # ป้องกันไม่ให้สต็อกติดลบ
         conn.execute('UPDATE components SET stock = MAX(0, stock - 1) WHERE id = ?', (product_id,))
 
     conn.commit()
@@ -109,5 +114,5 @@ def add_product():
 
 
 if __name__ == '__main__':
-    update_db_structure()  # รันระบบเช็กโครงสร้างฐานข้อมูลทุกครั้งที่เปิดเครื่อง
+    init_clean_db()  # สั่งเคลียร์และสร้างตารางโครงสร้างใหม่ทันที
     app.run(debug=True)
