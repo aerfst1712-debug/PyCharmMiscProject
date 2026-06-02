@@ -4,16 +4,18 @@ from datetime import datetime
 
 app = Flask(__name__)
 DATABASE = 'electronics.db'
-ADMIN_PASSWORD = '1234'  # รหัสผ่านแอดมินสำหรับล็อกอิน
+ADMIN_PASSWORD = '1234'  # 🔑 รหัสผ่านสำหรับเข้าสู่โหมดแอดมิน
+
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def update_db_structure():
     conn = get_db()
-    # 1. ตรวจสอบคอลัมน์พื้นฐาน
+    # 1. ตรวจสอบและสร้างคอลัมน์พื้นฐาน
     try:
         conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
@@ -25,45 +27,68 @@ def update_db_structure():
 
     # 2. สร้างตารางบันทึกประวัติ Stock Logs
     conn.execute('''
-        CREATE TABLE IF NOT EXISTS stock_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            component_name TEXT NOT NULL,
-            action_type TEXT NOT NULL,
-            timestamp TEXT NOT NULL
-        )
-    ''')
+                 CREATE TABLE IF NOT EXISTS stock_logs
+                 (
+                     id
+                     INTEGER
+                     PRIMARY
+                     KEY
+                     AUTOINCREMENT,
+                     component_name
+                     TEXT
+                     NOT
+                     NULL,
+                     action_type
+                     TEXT
+                     NOT
+                     NULL,
+                     timestamp
+                     TEXT
+                     NOT
+                     NULL
+                 )
+                 ''')
     conn.commit()
 
-    # 3. ตรวจสอบข้อมูลเริ่มต้น (Seed Data)
+    # 3. ใส่ข้อมูลเริ่มต้น (Seed Data) ถ้ายังไม่มีข้อมูลในตาราง
     cursor = conn.execute('SELECT COUNT(*) FROM components')
     if cursor.fetchone()[0] == 0:
         default_components = [
-            ('IC LM358', 'Integrated Circuit', '50 บาท', 'https://th.rs-online.com/images/F4852924-01.jpg', 'ไอซีขยายสัญญาณ Low Power Dual Operational Amplifier นิยมใช้ในวงจรกรองสัญญาณและวงจรเปรียบเทียบแรงดัน', 'ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 3V ถึง 32V, จำนวนช่องสัญญาณ: 2 ช่อง', 100, 'https://www.ti.com/lit/ds/symlink/lm358.pdf'),
-            ('Arduino Uno R3', 'Microcontroller', '250 บาท', 'https://docs.arduino.cc/static/29849b29d499ec249f056bc293d07ec5/A000066_featured.jpg', 'บอร์ดไมโครคอนโทรลเลอร์โอเพนซอร์สยอดนิยมสำหรับเรียนรู้และพัฒนาระบบฝังตัว วงจรอิเล็กทรอนิกส์ และหุ่นยนต์', 'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา', 4, 'https://docs.arduino.cc/resources/datasheets/A000066-datasheet.pdf')
+            ('IC LM358', 'Integrated Circuit', '50 บาท', 'https://th.rs-online.com/images/F4852924-01.jpg',
+             'ไอซีขยายสัญญาณ Low Power Dual Operational Amplifier นิยมใช้ในวงจรกรองสัญญาณและวงจรเปรียบเทียบแรงดัน',
+             'ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 3V ถึง 32V, จำนวนช่องสัญญาณ: 2 ช่อง', 100,
+             'https://www.ti.com/lit/ds/symlink/lm358.pdf'),
+            ('Arduino Uno R3', 'Microcontroller', '250 บาท',
+             'https://docs.arduino.cc/static/29849b29d499ec249f056bc293d07ec5/A000066_featured.jpg',
+             'บอร์ดไมโครคอนโทรลเลอร์โอเพนซอร์สยอดนิยมสำหรับเรียนรู้และพัฒนาระบบฝังตัว วงจรอิเล็กทรอนิกส์ และหุ่นยนต์',
+             'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา', 4,
+             'https://docs.arduino.cc/resources/datasheets/A000066-datasheet.pdf')
         ]
         conn.executemany('''
-            INSERT INTO components (name, category, price, image_url, description, specs, stock, datasheet_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', default_components)
+                         INSERT INTO components (name, category, price, image_url, description, specs, stock,
+                                                 datasheet_url)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                         ''', default_components)
         conn.commit()
 
     conn.close()
 
+
 @app.route('/')
 def home():
     password_input = request.args.get('pw', '')
-    is_admin = (password_input == ADMIN_PASSWORD)
+    is_admin = (password_input == ADMIN_PASSWORD)  # ตรวจสอบสิทธิ์แอดมิน
 
     search_query = request.args.get('search', '').strip()
     category_filter = request.args.get('category', '').strip()
 
     conn = get_db()
 
-    # ดึงหมวดหมู่ทั้งหมดที่มีในคลังมาทำปุ่มตัวกรอง (Dynamic Category)
+    # ดึงหมวดหมู่ทั้งหมดมาทำปุ่มตัวกรอง (ทุกคนเห็นเหมือนกัน)
     cat_cursor = conn.execute('SELECT DISTINCT category FROM components')
     categories = [row['category'] for row in cat_cursor.fetchall()]
 
-    # ค้นหาและกรองข้อมูล
+    # ระบบค้นหาและตัวกรองสินค้า (ทุกคนใช้งานได้ปกติ)
     if search_query:
         query = "SELECT * FROM components WHERE name LIKE ? OR category LIKE ?"
         cursor = conn.execute(query, (f"%{search_query}%", f"%{search_query}%"))
@@ -75,20 +100,26 @@ def home():
 
     products = [dict(row) for row in cursor.fetchall()]
 
-    # คำนวณแดชบอร์ดภาพรวมคลัง
-    total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0]
-    total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
-    total_stock = total_stock_res if total_stock_res is not None else 0
+    # ดึงข้อมูลสำหรับแผงควบคุมและประวัติ (เฉพาะแอดมิน)
+    total_items = 0
+    total_stock = 0
+    low_stock_count = 0
+    out_of_stock_count = 0
+    logs = []
 
-    low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0]
-    out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0]
+    if is_admin:
+        total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0]
+        total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
+        total_stock = total_stock_res if total_stock_res is not None else 0
 
-    # ดึงประวัติ Stock Logs ล่าสุด 5 รายการ
-    try:
-        log_cursor = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 5')
-        logs = log_cursor.fetchall()
-    except sqlite3.OperationalError:
-        logs = []
+        low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0]
+        out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0]
+
+        try:
+            log_cursor = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 5')
+            logs = log_cursor.fetchall()
+        except sqlite3.OperationalError:
+            logs = []
 
     conn.close()
 
@@ -104,6 +135,7 @@ def home():
                            out_of_stock_count=out_of_stock_count,
                            pw=password_input,
                            logs=logs)
+
 
 @app.route('/update_stock/<int:product_id>/<string:action>')
 def update_stock(product_id, action):
@@ -131,6 +163,7 @@ def update_stock(product_id, action):
     conn.close()
     return redirect(url_for('home', pw=password_input))
 
+
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
     password_input = request.args.get('pw', '')
@@ -147,6 +180,7 @@ def product_detail(product_id):
     product_dict = dict(product)
     product_dict['specs'] = [s.strip() for s in product_dict['specs'].split(',')] if product_dict['specs'] else []
     return render_template('product.html', product=product_dict, is_admin=is_admin, pw=password_input)
+
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_product():
@@ -166,9 +200,9 @@ def add_product():
 
         conn = get_db()
         conn.execute('''
-            INSERT INTO components (name, category, price, image_url, description, specs, stock, datasheet_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (name, category, price, image_url, description, specs, stock, datasheet_url))
+                     INSERT INTO components (name, category, price, image_url, description, specs, stock, datasheet_url)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     ''', (name, category, price, image_url, description, specs, stock, datasheet_url))
 
         now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
@@ -179,6 +213,7 @@ def add_product():
         return redirect(url_for('home', pw=password_input))
 
     return render_template('add.html', is_admin=True, pw=password_input)
+
 
 @app.route('/edit/<int:product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
@@ -198,10 +233,17 @@ def edit_product(product_id):
         datasheet_url = request.form.get('datasheet_url', '')
 
         conn.execute('''
-            UPDATE components 
-            SET name=?, category=?, price=?, image_url=?, description=?, specs=?, stock=?, datasheet_url=?
-            WHERE id=?
-        ''', (name, category, price, image_url, description, specs, stock, datasheet_url, product_id))
+                     UPDATE components
+                     SET name=?,
+                         category=?,
+                         price=?,
+                         image_url=?,
+                         description=?,
+                         specs=?,
+                         stock=?,
+                         datasheet_url=?
+                     WHERE id = ?
+                     ''', (name, category, price, image_url, description, specs, stock, datasheet_url, product_id))
 
         now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
@@ -215,6 +257,7 @@ def edit_product(product_id):
     product = cursor.fetchone()
     conn.close()
     return render_template('edit.html', product=product, is_admin=True, pw=password_input)
+
 
 @app.route('/delete/<int:product_id>')
 def delete_product(product_id):
@@ -233,22 +276,24 @@ def delete_product(product_id):
     conn.close()
     return redirect(url_for('home', pw=password_input))
 
+
 @app.route('/reset_db')
 def reset_db():
     conn = get_db()
     conn.execute('DROP TABLE IF EXISTS components')
     conn.execute('DROP TABLE IF EXISTS stock_logs')
     conn.execute('''
-        CREATE TABLE components (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            price TEXT NOT NULL,
-            image_url TEXT NOT NULL,
-            description TEXT NOT NULL,
-            specs TEXT NOT NULL,
-            stock INTEGER DEFAULT 0,
-            datasheet_url TEXT
+                 CREATE TABLE components
+                 (
+                     id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                     name        TEXT NOT NULL,
+                     category    TEXT NOT NULL,
+                     price       TEXT NOT NULL,
+                     image_url   TEXT NOT NULL,
+                     description TEXT NOT NULL,
+                     specs       TEXT NOT NULL,
+                     stock       INTEGER DEFAULT 0,
+                     datasheet_url TEXT
         )
     ''')
     conn.commit()
