@@ -32,8 +32,8 @@
             <a class="navbar-brand fw-bold fs-3" href="/{% if is_admin %}?pw={{ pw }}{% endif %}">⚡ ElectroHub <span style="color: #0ea5e9;">Labs</span></a>
             <div class="d-flex align-items-center gap-3">
                 <form method="GET" action="/" class="d-flex gap-1 align-items-center">
-                    <input type="password" name="pw" class="form-control form-control-sm rounded-pill" style="width: 130px;" placeholder="รหัสผ่านแอดมิน" value="{{ pw if is_admin else '' }}">
-                    <button type="submit" class="btn btn-dark btn-sm rounded-pill">ยืนยัน</button>
+                    <input type="password" name="pw" class="form-control form-control-sm rounded-pill" style="width: 140px;" placeholder="รหัสผ่านแอดมิน" value="{{ pw if is_admin else '' }}">
+                    <button type="submit" class="btn btn-dark btn-sm rounded-pill">🔒 ยืนยันสิทธิ์</button>
                 </form>
                 {% if is_admin %}
                     <a href="/add?pw={{ pw }}" class="btn btn-success btn-sm rounded-pill px-3 fw-bold">➕ เพิ่มเบอร์ IC</a>
@@ -44,7 +44,7 @@
 
     <div class="container my-5">
 
-        <!-- แดชบอร์ดสรุปสถิติ -->
+        {% if is_admin %}
         <div class="row g-3 mb-5">
             <div class="col-md-3 col-6">
                 <div class="stat-card">
@@ -71,17 +71,19 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
-        <!-- ฟอร์มค้นหา -->
-        <div class="mb-4 text-center">
-            <form action="/" method="GET" class="d-flex gap-2 justify-content-center" style="max-width: 600px; margin: 0 auto;">
+        <div class="text-center mb-5">
+            <h1 class="fw-bold mb-2">📦 คลังข้อมูลส่วนประกอบอิเล็กทรอนิกส์</h1>
+            <p class="text-muted">สืบค้นสเปก รายละเอียดชิ้นส่วน และข้อมูลทางเทคนิคได้อย่างรวดเร็ว</p>
+
+            <form action="/" method="GET" class="d-flex gap-2 justify-content-center mt-4" style="max-width: 600px; margin: 0 auto;">
                 {% if is_admin %}<input type="hidden" name="pw" value="{{ pw }}">{% endif %}
                 <input type="text" name="search" class="form-control rounded-pill px-4 shadow-sm" placeholder="🔍 พิมพ์ชื่อเบอร์ IC หรือหมวดหมู่เพื่อค้นหา..." value="{{ search_query }}">
                 <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" style="background-color: #0ea5e9; border: none;">ค้นหา</button>
             </form>
         </div>
 
-        <!-- ปุ่มตัวกรองหมวดหมู่ด่วน -->
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
             <a href="/{% if is_admin %}?pw={{ pw }}{% endif %}" class="btn rounded-pill px-3 fw-bold btn-sm {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ทั้งหมด</a>
             {% for cat in categories %}
@@ -89,16 +91,16 @@
             {% endfor %}
         </div>
 
-        <!-- แสดงการ์ดรายการ -->
         <div class="row g-4 mb-5">
             {% if products %}
                 {% for product in products %}
                 <div class="col-md-4 col-sm-6">
                     <div class="card h-100 shadow-sm p-2">
+
                         {% if is_admin %}
                         <div class="admin-actions">
-                            <a href="/edit/{{ product.id }}?pw={{ pw }}" class="btn btn-warning btn-sm rounded-circle shadow">✏️</a>
-                            <a href="/delete/{{ product.id }}?pw={{ pw }}" class="btn btn-danger btn-sm rounded-circle shadow" onclick="return confirm('ต้องการลบชิ้นส่วนนี้?')">🗑️</a>
+                            <a href="/edit/{{ product.id }}?pw={{ pw }}" class="btn btn-warning btn-sm rounded-circle shadow" title="แก้ไข">✏️</a>
+                            <a href="/delete/{{ product.id }}?pw={{ pw }}" class="btn btn-danger btn-sm rounded-circle shadow" title="ลบ" onclick="return confirm('ต้องการลบชิ้นส่วนนี้?')">🗑️</a>
                         </div>
                         {% endif %}
 
@@ -143,7 +145,7 @@
             {% endif %}
         </div>
 
-        <!-- ตารางแสดงประวัติ Log -->
+        {% if is_admin %}
         <div class="log-box shadow-sm">
             <h5 class="fw-bold mb-3 text-secondary">📋 บันทึกประวัติการจัดการคลังล่าสุด (Admin Stock Logs)</h5>
             <div class="table-responsive">
@@ -173,6 +175,7 @@
                 </table>
             </div>
         </div>
+        {% endif %}
 
     </div>
 </body>
