@@ -7,25 +7,28 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
         h1, h2, h3, .navbar-brand { font-family: 'Chakra Petch', sans-serif; }
-        .navbar { background-color: #0f172a !important; border-bottom: 3px solid #0284c7; }
+        .navbar { background-color: #ffffff !important; border-bottom: 2px solid #0ea5e9; }
+        .navbar-brand { color: #0f172a !important; }
         .card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; }
-        .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-        .card-title { color: #0f172a; font-weight: 700; }
-        .badge-tech { background-color: #e0f2fe; color: #0369a1; font-weight: 500; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .card-title { color: #1e293b; font-weight: 700; }
+        .badge-tech { background-color: #e0f2fe; color: #0369a1; font-weight: 600; }
         .price-tag { color: #059669; font-weight: bold; font-size: 1.1rem; }
-        .btn-view { background-color: #0284c7; color: white; border-radius: 20px; }
-        .btn-view:hover { background-color: #0369a1; color: white; }
+        .btn-view { background-color: #0ea5e9; color: #ffffff; border-radius: 20px; font-weight: bold; border: none; }
+        .btn-view:hover { background-color: #0284c7; color: #ffffff; }
         .search-box { max-width: 600px; margin: 0 auto; }
-        .stock-tag { background-color: #f1f5f9; border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: #475569; }
+        .form-control-light { background-color: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; }
+        .form-control-light:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15); }
+        .stock-tag { background-color: #f1f5f9; border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: #0284c7; border: 1px solid #cbd5e1; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-dark p-3 shadow-sm">
+    <nav class="navbar navbar-light p-3 shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold fs-3" href="/{% if is_admin %}?admin=true{% endif %}">⚡ ElectroHub <span class="text-info">Labs</span></a>
+            <a class="navbar-brand fw-bold fs-3" href="/{% if is_admin %}?admin=true{% endif %}">⚡ ElectroHub <span class="text-info" style="color: #0ea5e9 !important;">Labs</span></a>
             {% if is_admin %}
                 <a href="/add?admin=true" class="btn btn-success btn-sm rounded-pill px-3 fw-bold">➕ เพิ่มเบอร์ IC</a>
             {% endif %}
@@ -38,13 +41,13 @@
             <p class="text-muted fs-5">สืบค้นสเปค รายละเอียดชิ้นส่วน และข้อมูลทางเทคนิคได้อย่างรวดเร็ว</p>
         </div>
 
-        <div class="search-box mb-5 bg-transparent">
-            <form action="/" method="GET" class="d-flex gap-2 bg-transparent">
+        <div class="search-box mb-5">
+            <form action="/" method="GET" class="d-flex gap-2">
                 {% if is_admin %}
                     <input type="hidden" name="admin" value="true">
                 {% endif %}
-                <input type="text" name="search" class="form-control rounded-pill px-4 shadow-sm" placeholder="🔍 พิมพ์ชื่อเบอร์ IC หรือหมวดหมู่ที่ต้องการค้นหา..." value="{{ search_query }}">
-                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" style="background-color: #0284c7;">ค้นหา</button>
+                <input type="text" name="search" class="form-control form-control-light rounded-pill px-4 shadow-sm" placeholder="🔍 พิมพ์ชื่อเบอร์ IC หรือหมวดหมู่..." value="{{ search_query }}">
+                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" style="background-color: #0ea5e9; border: none;">ค้นหา</button>
                 {% if search_query %}
                     <a href="/{% if is_admin %}?admin=true{% endif %}" class="btn btn-outline-secondary rounded-pill px-3">ล้างค่า</a>
                 {% endif %}
@@ -56,9 +59,9 @@
                 {% for product in products %}
                 <div class="col-md-4 col-sm-6">
                     <div class="card h-100 shadow-sm p-2">
-                        <img src="{{ product.image_url }}" class="card-img-top rounded p-2" alt="{{ product.name }}" style="height: 200px; object-fit: contain; background: #f1f5f9;">
-                        <div class="card-body d-flex flex-column bg-transparent">
-                            <div class="d-flex justify-content-between align-items-center mb-2 bg-transparent">
+                        <img src="{{ product.image_url }}" class="card-img-top rounded p-2" alt="{{ product.name }}" style="height: 200px; object-fit: contain; background: #f8fafc;">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="badge badge-tech">{{ product.category }}</span>
                                 <span class="stock-tag px-2 py-1">คงเหลือ: {{ product.stock or 0 }} ชิ้น</span>
                             </div>
@@ -67,15 +70,15 @@
                             <p class="card-text text-muted text-truncate mb-3">{{ product.description }}</p>
 
                             {% if is_admin %}
-                            <div class="d-flex gap-1 align-items-center mb-3 bg-transparent justify-content-center border-top border-bottom py-2">
-                                <span class="small text-muted me-2">จัดการคลัง:</span>
+                            <div class="d-flex gap-1 align-items-center mb-3 justify-content-center border-top border-bottom py-2">
+                                <span class="small text-muted me-2">คลัง:</span>
                                 <a href="/update_stock/{{ product.id }}/decrease?admin=true" class="btn btn-outline-danger btn-sm rounded-circle fw-bold" style="width: 28px; height: 28px; line-height: 12px;">-</a>
-                                <span class="fw-bold mx-2">{{ product.stock or 0 }}</span>
+                                <span class="fw-bold mx-2 text-dark">{{ product.stock or 0 }}</span>
                                 <a href="/update_stock/{{ product.id }}/increase?admin=true" class="btn btn-outline-success btn-sm rounded-circle fw-bold" style="width: 28px; height: 28px; line-height: 12px;">+</a>
                             </div>
                             {% endif %}
 
-                            <div class="d-flex justify-content-between align-items-center mt-auto bg-transparent">
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
                                 <span class="price-tag">ประมาณ {{ product.price }}</span>
                                 <a href="/product/{{ product.id }}{% if is_admin %}?admin=true{% endif %}" class="btn btn-view btn-sm px-4">ดูรายละเอียด</a>
                             </div>
@@ -84,8 +87,8 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="text-center my-5 bg-transparent py-5">
-                    <h3 class="text-muted">❌ ไม่พบข้อมูลเบอร์ IC หรืออุปกรณ์ที่ตรงกับ "{{ search_query }}"</h3>
+                <div class="text-center my-5 py-5">
+                    <h3 class="text-muted">❌ 不พบข้อมูลเบอร์ IC ที่ค้นหา</h3>
                 </div>
             {% endif %}
         </div>
