@@ -29,12 +29,17 @@
 
     <nav class="navbar navbar-light p-3 shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold fs-3" href="/{% if is_admin %}?pw={{ pw }}{% endif %}">⚡ ElectroHub <span style="color: #0ea5e9;">Labs</span></a>
+            <a class="navbar-brand fw-bold fs-3" href="/{% if is_admin %}?pw={{ pw }}&admin=true{% endif %}">⚡ ElectroHub <span style="color: #0ea5e9;">Labs</span></a>
             <div class="d-flex align-items-center gap-3">
+
+                {% if show_login_box or is_admin %}
                 <form method="GET" action="/" class="d-flex gap-1 align-items-center">
+                    <input type="hidden" name="admin" value="true">
                     <input type="password" name="pw" class="form-control form-control-sm rounded-pill" style="width: 140px;" placeholder="รหัสผ่านแอดมิน" value="{{ pw if is_admin else '' }}">
-                    <button type="submit" class="btn btn-dark btn-sm rounded-pill">🔒 ยืนยันสิทธิ์</button>
+                    <button type="submit" class="btn btn-dark btn-sm rounded-pill">🔒 ยืนยัน</button>
                 </form>
+                {% endif %}
+
                 {% if is_admin %}
                     <a href="/add?pw={{ pw }}" class="btn btn-success btn-sm rounded-pill px-3 fw-bold">➕ เพิ่มเบอร์ IC</a>
                 {% endif %}
@@ -78,16 +83,16 @@
             <p class="text-muted">สืบค้นสเปก รายละเอียดชิ้นส่วน และข้อมูลทางเทคนิคได้อย่างรวดเร็ว</p>
 
             <form action="/" method="GET" class="d-flex gap-2 justify-content-center mt-4" style="max-width: 600px; margin: 0 auto;">
-                {% if is_admin %}<input type="hidden" name="pw" value="{{ pw }}">{% endif %}
+                {% if is_admin %}<input type="hidden" name="pw" value="{{ pw }}"><input type="hidden" name="admin" value="true">{% endif %}
                 <input type="text" name="search" class="form-control rounded-pill px-4 shadow-sm" placeholder="🔍 พิมพ์ชื่อเบอร์ IC หรือหมวดหมู่เพื่อค้นหา..." value="{{ search_query }}">
                 <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" style="background-color: #0ea5e9; border: none;">ค้นหา</button>
             </form>
         </div>
 
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
-            <a href="/{% if is_admin %}?pw={{ pw }}{% endif %}" class="btn rounded-pill px-3 fw-bold btn-sm {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ทั้งหมด</a>
+            <a href="/{% if is_admin %}?pw={{ pw }}&admin=true{% endif %}" class="btn rounded-pill px-3 fw-bold btn-sm {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ทั้งหมด</a>
             {% for cat in categories %}
-                <a href="/?category={{ cat }}{% if is_admin %}&pw={{ pw }}{% endif %}" class="btn rounded-pill px-3 fw-bold btn-sm {% if current_category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if current_category == cat %}background-color: #0ea5e9; border:none;{% endif %}">{{ cat }}</a>
+                <a href="/?category={{ cat }}{% if is_admin %}&pw={{ pw }}&admin=true{% endif %}" class="btn rounded-pill px-3 fw-bold btn-sm {% if current_category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if current_category == cat %}background-color: #0ea5e9; border:none;{% endif %}">{{ cat }}</a>
             {% endfor %}
         </div>
 
