@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แก้ไขข้อมูลชิ้นส่วน - ElectroHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
+        h1, .navbar-brand { font-family: 'Chakra Petch', sans-serif; }
+        .form-box { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .form-control { background-color: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; }
+        .form-control:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15); }
+    </style>
+</head>
+<body>
+
+    <div class="container my-5">
+        <div class="col-lg-8 mx-auto">
+            <a href="/product/{{ product.id }}?admin=true" class="btn btn-outline-secondary btn-sm rounded-pill mb-4">⬅ ยกเลิกและกลับ</a>
+
+            <div class="form-box p-4 p-md-5">
+                <h1 class="fw-bold mb-4 text-dark text-center">✏️ แก้ไขข้อมูลเบอร์ IC: {{ product.name }}</h1>
+
+                <form action="/edit/{{ product.id }}?admin=true" method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">ชื่ออุปกรณ์ / เบอร์ IC</label>
+                            <input type="text" class="form-control" name="name" value="{{ product.name }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">หมวดหมู่</label>
+                            <input type="text" class="form-control" name="category" value="{{ product.category }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">ราคา</label>
+                            <input type="text" class="form-control" name="price" value="{{ product.price }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">ลิงก์รูปภาพตัวอย่าง (URL)</label>
+                            <input type="url" class="form-control" name="image_url" value="{{ product.image_url }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold text-success">📦 จำนวนคงเหลือปัจจุบัน</label>
+                            <input type="number" class="form-control" name="stock" value="{{ product.stock or 0 }}" min="0" required>
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label fw-bold text-primary">🔗 ลิงก์คู่มือ Datasheet (URL PDF)</label>
+                            <input type="url" class="form-control" name="datasheet_url" value="{{ product.datasheet_url or '' }}" placeholder="https://...">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">คำอธิบายรายละเอียด</label>
+                        <textarea class="form-control" name="description" rows="3" required>{{ product.description }}</textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">คุณสมบัติทางเทคนิค (แยกด้วยเครื่องหมายจุลภาค , )</label>
+                        <textarea class="form-control" name="specs" rows="2" required>{{ product.specs }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2.5" style="background-color: #0ea5e9; border: none;">💾 อัปเดตการแก้ไขข้อมูล</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
