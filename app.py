@@ -13,15 +13,21 @@ def get_db():
 
 @app.route('/')
 def home():
+    # ตรวจสอบสิทธิ์แอดมินจากลิงก์ระบุ ?admin=true
+    is_admin = request.args.get('admin') == 'true'
+
     conn = get_db()
     cursor = conn.execute('SELECT * FROM components')
     products = cursor.fetchall()
     conn.close()
-    return render_template('index.html', products=products)
+
+    return render_template('index.html', products=products, is_admin=is_admin)
 
 
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
+    is_admin = request.args.get('admin') == 'true'
+
     conn = get_db()
     cursor = conn.execute('SELECT * FROM components WHERE id = ?', (product_id,))
     product = cursor.fetchone()
@@ -32,11 +38,13 @@ def product_detail(product_id):
 
     product_dict = dict(product)
     product_dict['specs'] = [s.strip() for s in product_dict['specs'].split(',')] if product_dict['specs'] else []
-    return render_template('product.html', product=product_dict)
+    return render_template('product.html', product=product_dict, is_admin=is_admin)
 
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_product():
+    is_admin = request.args.get('admin') == 'true'
+
     if request.method == 'POST':
         name = request.form['name']
         category = request.form['category']
@@ -45,6 +53,7 @@ def add_product():
         description = request.form['description']
         specs = request.form['specs']
 
+        # บันทึกเข้าฐานข้อมูลทันทีโดยไม่ต้องเช็กส่วนรหัสผ่านแล้ว
         conn = get_db()
         conn.execute('''
                      INSERT INTO components (name, category, price, image_url, description, specs)
@@ -53,9 +62,10 @@ def add_product():
         conn.commit()
         conn.close()
 
-        return redirect(url_for('home'))
+        # เพิ่มเสร็จ ให้เด้งกลับหน้าหลักพร้อมคงสิทธิ์แอดมินไว้ (ปุ่มจะได้ไม่หาย)
+        return redirect(url_for('home', admin='true'))
 
-    return render_template('add.html')
+    return render_template('add.html', is_admin=is_admin)
 
 
 if __name__ == '__main__':
