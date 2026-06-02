@@ -11,17 +11,57 @@ def get_db():
     return conn
 
 
+# ระบบอัปเกรดโครงสร้างฐานข้อมูลอัตโนมัติ
+def update_db_structure():
+    conn = get_db()
+    # ตรวจสอบและเพิ่มคอลัมน์ stock
+    try:
+        conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # ถ้ามีคอลัมน์อยู่แล้วให้ข้าม
+
+    # ตรวจสอบและเพิ่มคอลัมน์ datasheet_url
+    try:
+        conn.execute("ALTER TABLE components ADD COLUMN datasheet_url TEXT")
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
+    conn.close()
+
+
 @app.route('/')
 def home():
-    # ตรวจสอบสิทธิ์แอดมินจากลิงก์ระบุ ?admin=true
     is_admin = request.args.get('admin') == 'true'
+    search_query = request.args.get('search', '').strip()
 
     conn = get_db()
-    cursor = conn.execute('SELECT * FROM components')
+    if search_query:
+        query = "SELECT * FROM components WHERE name LIKE ? OR category LIKE ?"
+        cursor = conn.execute(query, (f"%{search_query}%", f"%{search_query}%"))
+    else:
+        cursor = conn.execute('SELECT * FROM components')
+
     products = cursor.fetchall()
     conn.close()
 
-    return render_template('index.html', products=products, is_admin=is_admin)
+    return render_template('index.html', products=products, is_admin=is_admin, search_query=search_query)
+
+
+# ฟังก์ชันทางลัดสำหรับกดเพิ่ม/ลดสต็อกหน้าเว็บ
+@app.route('/update_stock/<int:product_id>/<string:action>')
+def update_stock(product_id, action):
+    is_admin = request.args.get('admin') == 'true'
+    conn = get_db()
+
+    if action == 'increase':
+        conn.execute('UPDATE components SET stock = stock + 1 WHERE id = ?', (product_id,))
+    elif action == 'decrease':
+        # ป้องกันไม่ให้สต็อกติดลบ
+        conn.execute('UPDATE components SET stock = MAX(0, stock - 1) WHERE id = ?', (product_id,))
+
+    conn.commit()
+    conn.close()
+    return redirect(url_for('home', admin='true' if is_admin else 'false'))
 
 
 @app.route('/product/<int:product_id>')
@@ -52,21 +92,22 @@ def add_product():
         image_url = request.form['image_url']
         description = request.form['description']
         specs = request.form['specs']
+        stock = request.form.get('stock', 0, type=int)
+        datasheet_url = request.form.get('datasheet_url', '')
 
-        # บันทึกเข้าฐานข้อมูลทันทีโดยไม่ต้องเช็กส่วนรหัสผ่านแล้ว
         conn = get_db()
         conn.execute('''
-                     INSERT INTO components (name, category, price, image_url, description, specs)
-                     VALUES (?, ?, ?, ?, ?, ?)
-                     ''', (name, category, price, image_url, description, specs))
+                     INSERT INTO components (name, category, price, image_url, description, specs, stock, datasheet_url)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     ''', (name, category, price, image_url, description, specs, stock, datasheet_url))
         conn.commit()
         conn.close()
 
-        # เพิ่มเสร็จ ให้เด้งกลับหน้าหลักพร้อมคงสิทธิ์แอดมินไว้ (ปุ่มจะได้ไม่หาย)
         return redirect(url_for('home', admin='true'))
 
     return render_template('add.html', is_admin=is_admin)
 
 
 if __name__ == '__main__':
+    update_db_structure()  # รันระบบเช็กโครงสร้างฐานข้อมูลทุกครั้งที่เปิดเครื่อง
     app.run(debug=True)

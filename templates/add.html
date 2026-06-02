@@ -46,6 +46,17 @@
                         </div>
                     </div>
 
+                    <div class="row bg-transparent">
+                        <div class="col-md-4 mb-3 bg-transparent">
+                            <label class="form-label fw-bold text-success">📦 จำนวนสต็อกเริ่มต้น</label>
+                            <input type="number" class="form-control" name="stock" value="0" min="0" required>
+                        </div>
+                        <div class="col-md-8 mb-3 bg-transparent">
+                            <label class="form-label fw-bold text-primary">🔗 ลิงก์ไฟล์คู่มือ Datasheet (URL PDF)</label>
+                            <input type="url" class="form-control" name="datasheet_url" placeholder="เช่น https://www.ti.com/lit/ds/symlink/lm358.pdf">
+                        </div>
+                    </div>
+
                     <div class="mb-3 bg-transparent">
                         <label class="form-label fw-bold">คำอธิบายรายละเอียด</label>
                         <textarea class="form-control" name="description" rows="3" placeholder="อธิบายหน้าที่การทำงานเบื้องต้น..." required></textarea>

@@ -11,8 +11,8 @@
         h1, h3, .brand-title { font-family: 'Chakra Petch', sans-serif; }
         .main-box { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .spec-item { background-color: #f1f5f9; border-left: 4px solid #0284c7; color: #1e293b; font-weight: 500; }
-        .text-gradient { color: #0284c7; }
         .img-container { background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; }
+        .stock-box { border-left: 4px solid #059669; background-color: #ecfdf5; color: #065f46; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -23,22 +23,34 @@
         <div class="main-box p-4 p-md-5">
             <div class="row g-5 bg-transparent">
                 <div class="col-md-5 bg-transparent">
-                    <div class="img-container text-center">
+                    <div class="img-container text-center mb-3">
                         <img src="{{ product.image_url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 320px; object-fit: contain;">
                     </div>
+
+                    {% if product.datasheet_url %}
+                        <a href="{{ product.datasheet_url }}" target="_blank" class="btn btn-primary w-100 fw-bold py-2.5 rounded-pill shadow-sm" style="background-color: #0284c7;">
+                            📄 เปิดดูไฟล์คู่มือ Datasheet (PDF)
+                        </a>
+                    {% else %}
+                        <button class="btn btn-outline-secondary w-100 rounded-pill" disabled>ไม่มีไฟล์ลิงก์ Datasheet</button>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-7 bg-transparent">
                     <span class="badge bg-secondary mb-2 fs-6 px-3 rounded-pill">{{ product.category }}</span>
                     <h1 class="fw-bold text-dark display-5 mb-2">{{ product.name }}</h1>
-                    <h3 class="text-success fw-bold mb-4">ราคาประเมิน: {{ product.price }}</h3>
+
+                    <div class="d-flex gap-3 my-3 bg-transparent align-items-center">
+                        <h4 class="text-secondary fw-bold m-0">ราคา: {{ product.price }}</h4>
+                        <div class="stock-box p-2 px-3 rounded">📦 ในคลังเหลือ: {{ product.stock or 0 }} ชิ้น</div>
+                    </div>
 
                     <hr class="text-muted">
 
                     <h5 class="fw-bold text-dark mt-4">📌 คำอธิบายคุณลักษณะ:</h5>
                     <p class="fs-6 lh-lg text-secondary" style="text-indent: 20px;">{{ product.description }}</p>
 
-                    <h5 class="fw-bold text-dark mt-4 mb-3">🛠️ คุณสมบัติทางเทคนิค (Datasheet Specifications):</h5>
+                    <h5 class="fw-bold text-dark mt-4 mb-3">🛠️ คุณสมบัติทางเทคนิค:</h5>
                     <div class="row g-2 bg-transparent">
                         {% if product.specs %}
                             {% for spec in product.specs %}
