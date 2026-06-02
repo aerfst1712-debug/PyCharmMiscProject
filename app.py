@@ -4,7 +4,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 DATABASE = 'electronics.db'
-ADMIN_PASSWORD = '1234'  # 🔑 รหัสผ่านสำหรับเข้าสู่โหมดแอดมิน
+ADMIN_PASSWORD = '1234'  # 🔑 รหัสผ่านแอดมิน
 
 
 def get_db():
@@ -15,7 +15,6 @@ def get_db():
 
 def update_db_structure():
     conn = get_db()
-    # 1. ตรวจสอบและสร้างคอลัมน์พื้นฐาน
     try:
         conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
@@ -25,7 +24,6 @@ def update_db_structure():
     except sqlite3.OperationalError:
         pass
 
-    # 2. สร้างตารางบันทึกประวัติ Stock Logs
     conn.execute('''
                  CREATE TABLE IF NOT EXISTS stock_logs
                  (
@@ -50,7 +48,6 @@ def update_db_structure():
                  ''')
     conn.commit()
 
-    # 3. ใส่ข้อมูลเริ่มต้น (Seed Data) ถ้ายังไม่มีข้อมูลในตาราง
     cursor = conn.execute('SELECT COUNT(*) FROM components')
     if cursor.fetchone()[0] == 0:
         default_components = [
@@ -76,19 +73,19 @@ def update_db_structure():
 
 @app.route('/')
 def home():
+    # 📌 เช็กว่ามีการพิมพ์ต่อท้ายด้วย ?admin=true หรือไม่
+    show_login_box = (request.args.get('admin', '').lower() == 'true')
+
     password_input = request.args.get('pw', '')
-    is_admin = (password_input == ADMIN_PASSWORD)  # ตรวจสอบสิทธิ์แอดมิน
+    is_admin = (password_input == ADMIN_PASSWORD)
 
     search_query = request.args.get('search', '').strip()
     category_filter = request.args.get('category', '').strip()
 
     conn = get_db()
-
-    # ดึงหมวดหมู่ทั้งหมดมาทำปุ่มตัวกรอง (ทุกคนเห็นเหมือนกัน)
     cat_cursor = conn.execute('SELECT DISTINCT category FROM components')
     categories = [row['category'] for row in cat_cursor.fetchall()]
 
-    # ระบบค้นหาและตัวกรองสินค้า (ทุกคนใช้งานได้ปกติ)
     if search_query:
         query = "SELECT * FROM components WHERE name LIKE ? OR category LIKE ?"
         cursor = conn.execute(query, (f"%{search_query}%", f"%{search_query}%"))
@@ -100,7 +97,6 @@ def home():
 
     products = [dict(row) for row in cursor.fetchall()]
 
-    # ดึงข้อมูลสำหรับแผงควบคุมและประวัติ (เฉพาะแอดมิน)
     total_items = 0
     total_stock = 0
     low_stock_count = 0
@@ -111,7 +107,6 @@ def home():
         total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0]
         total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
         total_stock = total_stock_res if total_stock_res is not None else 0
-
         low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0]
         out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0]
 
@@ -134,7 +129,8 @@ def home():
                            low_stock_count=low_stock_count,
                            out_of_stock_count=out_of_stock_count,
                            pw=password_input,
-                           logs=logs)
+                           logs=logs,
+                           show_login_box=show_login_box)  # ส่งสถานะการซ่อน/แสดงกล่องล็อกอินไปที่ HTML
 
 
 @app.route('/update_stock/<int:product_id>/<string:action>')
@@ -161,7 +157,7 @@ def update_stock(product_id, action):
 
         conn.commit()
     conn.close()
-    return redirect(url_for('home', pw=password_input))
+    return redirect(url_for('home', pw=password_input, admin='true' if password_input == ADMIN_PASSWORD else 'false'))
 
 
 @app.route('/product/<int:product_id>')
@@ -210,7 +206,7 @@ def add_product():
 
         conn.commit()
         conn.close()
-        return redirect(url_for('home', pw=password_input))
+        return redirect(url_for('home', pw=password_input, admin='true'))
 
     return render_template('add.html', is_admin=True, pw=password_input)
 
@@ -274,7 +270,7 @@ def delete_product(product_id):
         conn.execute('DELETE FROM components WHERE id = ?', (product_id,))
     conn.commit()
     conn.close()
-    return redirect(url_for('home', pw=password_input))
+    return redirect(url_for('home', pw=password_input, admin='true'))
 
 
 @app.route('/reset_db')
@@ -285,21 +281,22 @@ def reset_db():
     conn.execute('''
                  CREATE TABLE components
                  (
-                     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                     name        TEXT NOT NULL,
-                     category    TEXT NOT NULL,
-                     price       TEXT NOT NULL,
-                     image_url   TEXT NOT NULL,
-                     description TEXT NOT NULL,
-                     specs       TEXT NOT NULL,
-                     stock       INTEGER DEFAULT 0,
+                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                     name          TEXT NOT NULL,
+                     category      TEXT NOT NULL,
+                     price         TEXT NOT NULL,
+                     image_url     TEXT NOT NULL,
+                     description   TEXT NOT NULL,
+                     specs         TEXT NOT NULL,
+                     stock         INTEGER DEFAULT 0,
                      datasheet_url TEXT
-        )
-    ''')
+                 )
+                 ''')
     conn.commit()
     conn.close()
     update_db_structure()
-    return "รีเซ็ตตารางสำเร็จแล้ว! กรุณากลับไปที่หน้าแรกหลักของเว็บ"
+    return "รีเซ็ตตารางสำเร็จแล้ว!"
+
 
 if __name__ == '__main__':
     update_db_structure()
