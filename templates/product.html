@@ -3,81 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ product.name }} - ข้อมูลเชิงลึก</title>
+    <title>{{ product.name }} - รายละเอียดทางเทคนิค</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Sarabun', sans-serif;
-            background-color: #0f172a;
-            color: #e2e8f0;
-        }
-        h1, h2, h5, .navbar-brand {
-            font-family: 'Chakra Petch', sans-serif;
-        }
-        .navbar {
-            background-color: #1e293b !important;
-            border-bottom: 2px solid #0ea5e9;
-        }
-        .detail-box {
-            background-color: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 16px;
-        }
-        .product-image {
-            width: 100%;
-            max-height: 350px;
-            object-fit: cover;
-            border-radius: 12px;
-            border: 1px solid #334155;
-        }
-        .spec-item {
-            background-color: #111827 !important;
-            color: #94a3b8 !important;
-            border: 1px solid #1f2937 !important;
-            margin-bottom: 8px;
-            border-radius: 8px !important;
-        }
-        .text-gradient {
-            background: linear-gradient(45deg, #38bdf8, #34d399);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
+        h1, h3, .brand-title { font-family: 'Chakra Petch', sans-serif; }
+        .main-box { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .spec-item { background-color: #f1f5f9; border-left: 4px solid #0284c7; color: #1e293b; font-weight: 500; }
+        .text-gradient { color: #0284c7; }
+        .img-container { background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-dark">
-        <div class="container">
-            <a class="navbar-brand fw-bold fs-4" href="/">⚡ <span class="text-gradient">ElectroHub</span> Labs</a>
-        </div>
-    </nav>
-
     <div class="container my-5">
-        <a href="/" class="btn btn-outline-light btn-sm rounded-pill mb-4 px-4">⬅ กลับหน้าหลักคลังอุปกรณ์</a>
+        <a href="/{% if is_admin %}?admin=true{% endif %}" class="btn btn-outline-secondary btn-sm rounded-pill mb-4">⬅ กลับหน้าหลัก</a>
 
-        <div class="detail-box p-4 p-md-5 shadow-lg">
-            <div class="row g-5">
-                <div class="col-lg-5">
-                    <img src="{{ product.image_url }}" class="product-image shadow" alt="{{ product.name }}">
+        <div class="main-box p-4 p-md-5">
+            <div class="row g-5 bg-transparent">
+                <div class="col-md-5 bg-transparent">
+                    <div class="img-container text-center">
+                        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 320px; object-fit: contain;">
+                    </div>
                 </div>
 
-                <div class="col-lg-7">
-                    <span class="badge bg-info text-dark fw-bold mb-2 px-3 py-1.5 rounded-pill">{{ product.category }}</span>
-                    <h1 class="fw-bold mb-2 text-white">{{ product.name }}</h1>
+                <div class="col-md-7 bg-transparent">
+                    <span class="badge bg-secondary mb-2 fs-6 px-3 rounded-pill">{{ product.category }}</span>
+                    <h1 class="fw-bold text-dark display-5 mb-2">{{ product.name }}</h1>
                     <h3 class="text-success fw-bold mb-4">ราคาประเมิน: {{ product.price }}</h3>
 
-                    <h5 class="text-info fw-bold mb-2">📌 คำอธิบายคุณลักษณะ:</h5>
-                    <p class="text-muted fs-5 mb-4" style="line-height: 1.7;">{{ product.description }}</p>
+                    <hr class="text-muted">
 
-                    <hr class="border-secondary my-4">
+                    <h5 class="fw-bold text-dark mt-4">📌 คำอธิบายคุณลักษณะ:</h5>
+                    <p class="fs-6 lh-lg text-secondary" style="text-indent: 20px;">{{ product.description }}</p>
 
-                    <h5 class="text-info fw-bold mb-3">🛠️ คุณสมบัติทางเทคนิค (Datasheet Specifications):</h5>
-                    <ul class="list-group">
-                        {% for spec in product.specs %}
-                            <li class="list-group-item spec-item py-2.5">✔ {{ spec }}</li>
-                        {% endfor %}
-                    </ul>
+                    <h5 class="fw-bold text-dark mt-4 mb-3">🛠️ คุณสมบัติทางเทคนิค (Datasheet Specifications):</h5>
+                    <div class="row g-2 bg-transparent">
+                        {% if product.specs %}
+                            {% for spec in product.specs %}
+                                <div class="col-10 bg-transparent">
+                                    <div class="spec-item p-2 px-3 rounded mb-1">✔️ {{ spec }}</div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted italic">ไม่มีระบุข้อมูลเทคนิคเพิ่มเติม</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
