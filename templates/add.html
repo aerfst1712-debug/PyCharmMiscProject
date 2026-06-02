@@ -18,57 +18,42 @@
 
     <div class="container my-5">
         <div class="col-lg-8 mx-auto">
-            <a href="/?admin=true" class="btn btn-outline-secondary btn-sm rounded-pill mb-4">⬅ กลับหน้าหลัก</a>
-
-            {% with messages = get_flashed_messages() %}
-              {% if messages %}
-                {% for message in messages %}
-                  <div class="alert alert-danger rounded-pill text-center fw-bold mb-4" role="alert">
-                    {{ message }}
-                  </div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
+            <a href="/" class="btn btn-outline-secondary btn-sm rounded-pill mb-4">⬅ กลับหน้าหลัก</a>
 
             <div class="form-box p-4 p-md-5">
                 <h1 class="fw-bold mb-4 text-dark text-center">➕ เพิ่มข้อมูลอุปกรณ์ / เบอร์ IC ใหม่</h1>
 
-                <form action="/add?admin=true" method="POST">
+                <form action="/add" method="POST">
                     <div class="row bg-transparent">
                         <div class="col-md-6 mb-3 bg-transparent">
                             <label class="form-label fw-bold">ชื่ออุปกรณ์ / เบอร์ IC</label>
-                            <input type="text" class="form-control" name="name" value="{{ name or '' }}" placeholder="เช่น IC LM358" required>
+                            <input type="text" class="form-control" name="name" placeholder="เช่น IC LM358" required>
                         </div>
                         <div class="col-md-6 mb-3 bg-transparent">
                             <label class="form-label fw-bold">หมวดหมู่</label>
-                            <input type="text" class="form-control" name="category" value="{{ category or '' }}" placeholder="เช่น Integrated Circuit" required>
+                            <input type="text" class="form-control" name="category" placeholder="เช่น Integrated Circuit" required>
                         </div>
                     </div>
 
                     <div class="row bg-transparent">
                         <div class="col-md-6 mb-3 bg-transparent">
                             <label class="form-label fw-bold">ราคา (บาท)</label>
-                            <input type="text" class="form-control" name="price" value="{{ price or '' }}" placeholder="เช่น 20 บาท" required>
+                            <input type="text" class="form-control" name="price" placeholder="เช่น 20 บาท" required>
                         </div>
                         <div class="col-md-6 mb-3 bg-transparent">
                             <label class="form-label fw-bold">ลิงก์รูปภาพตัวอย่าง (URL)</label>
-                            <input type="url" class="form-control" name="image_url" value="{{ image_url or '' }}" placeholder="https://..." required>
+                            <input type="url" class="form-control" name="image_url" placeholder="https://..." required>
                         </div>
                     </div>
 
                     <div class="mb-3 bg-transparent">
                         <label class="form-label fw-bold">คำอธิบายรายละเอียด</label>
-                        <textarea class="form-control" name="description" rows="3" placeholder="อธิบายหน้าที่การทำงานเบื้องต้น..." required>{{ description or '' }}</textarea>
+                        <textarea class="form-control" name="description" rows="3" placeholder="อธิบายหน้าที่การทำงานเบื้องต้น..." required></textarea>
                     </div>
 
-                    <div class="mb-3 bg-transparent">
+                    <div class="mb-4 bg-transparent">
                         <label class="form-label fw-bold">คุณสมบัติทางเทคนิค (แยกด้วยเครื่องหมายจุลภาค , )</label>
-                        <textarea class="form-control" name="specs" rows="2" placeholder="เช่น ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 5V" required>{{ specs or '' }}</textarea>
-                    </div>
-
-                    <div class="mb-4 bg-transparent p-3 rounded border border-danger bg-light">
-                        <label class="form-label text-danger fw-bold">🔑 รหัสผ่านผู้ดูแลระบบ (Admin Password)</label>
-                        <input type="password" class="form-control" name="password" placeholder="กรอกรหัสลับเพื่อยืนยันตัวตนก่อนบันทึก" style="border-color: #f87171;" required>
+                        <textarea class="form-control" name="specs" rows="2" placeholder="เช่น ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 5V" required></textarea>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2.5" style="background-color: #0284c7;">💾 บันทึกข้อมูลเข้าฐานข้อมูลออนไลน์</button>
