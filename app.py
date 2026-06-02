@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, abort
 import sqlite3
-import os
 
 app = Flask(__name__)
 DATABASE = 'electronics.db'
@@ -12,26 +11,19 @@ def get_db():
     return conn
 
 
-# 🛠️ ฟังก์ชันสร้างตารางใหม่เอี่ยมแบบมีช่องข้อมูลครบถ้วน
-def init_clean_db():
+def update_db_structure():
     conn = get_db()
-    # ลบตารางเก่าทิ้งชั่วคราวเพื่อรีเซ็ตโครงสร้าง
-    conn.execute('DROP TABLE IF EXISTS components')
-    # สร้างตารางใหม่ที่มีคอลัมน์ครบทั้งหมดในครั้งเดียว
-    conn.execute('''
-                 CREATE TABLE components
-                 (
-                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                     name          TEXT NOT NULL,
-                     category      TEXT NOT NULL,
-                     price         TEXT NOT NULL,
-                     image_url     TEXT NOT NULL,
-                     description   TEXT NOT NULL,
-                     specs         TEXT NOT NULL,
-                     stock         INTEGER DEFAULT 0,
-                     datasheet_url TEXT
-                 )
-                 ''')
+    # ตรวจสอบและเพิ่มคอลัมน์ stock
+    try:
+        conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
+    # ตรวจสอบและเพิ่มคอลัมน์ datasheet_url
+    try:
+        conn.execute("ALTER TABLE components ADD COLUMN datasheet_url TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -113,5 +105,6 @@ def add_product():
     return render_template('add.html', is_admin=is_admin)
 
 
-iif __name__ == '__main__':
+if __name__ == '__main__':
+    update_db_structure()
     app.run(debug=True)
