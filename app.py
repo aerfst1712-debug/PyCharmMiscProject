@@ -13,6 +13,7 @@ def get_db():
 
 def update_db_structure():
     conn = get_db()
+    # 1. ตรวจสอบและเพิ่มคอลัมน์สต็อกและ Datasheet (ถ้ายังไม่มี)
     try:
         conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
@@ -22,6 +23,40 @@ def update_db_structure():
     except sqlite3.OperationalError:
         pass
     conn.commit()
+
+    # 2. ⚡ ส่วนล็อกข้อมูลเริ่มต้น: ระบบจะตรวจสอบว่าคลังว่างเปล่าไหม ถ้าว่างจะใส่ข้อมูลนี้ให้ทันที
+    cursor = conn.execute('SELECT COUNT(*) FROM components')
+    if cursor.fetchone()[0] == 0:
+        # คุณสามารถเปลี่ยนชื่อ รูปภาพ หรือราคาของอุปกรณ์เริ่มต้นตรงนี้ได้ตามต้องการเลยครับ
+        default_components = [
+            (
+                'IC LM358',
+                'Integrated Circuit',
+                '50 บาท',
+                'https://th.rs-online.com/images/F4852924-01.jpg',
+                'ไอซีขยายสัญญาณ Low Power Dual Operational Amplifier นิยมใช้ในวงจรกรองสัญญาณและวงจรเปรียบเทียบแรงดัน',
+                'ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 3V ถึง 32V, จำนวนช่องสัญญาณ: 2 ช่อง',
+                100,
+                'https://www.ti.com/lit/ds/symlink/lm358.pdf'
+            ),
+            (
+                'Arduino Uno R3',
+                'Microcontroller',
+                '250 บาท',
+                'https://docs.arduino.cc/static/29849b29d499ec249f056bc293d07ec5/A000066_featured.jpg',
+                'บอร์ดไมโครคอนโทรลเลอร์โอเพนซอร์สยอดนิยมสำหรับเรียนรู้และพัฒนาระบบฝังตัว วงจรอิเล็กทรอนิกส์ และหุ่นยนต์',
+                'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา',
+                50,
+                'https://docs.arduino.cc/resources/datasheets/A000066-datasheet.pdf'
+            )
+        ]
+        conn.executemany('''
+                         INSERT INTO components (name, category, price, image_url, description, specs, stock,
+                                                 datasheet_url)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                         ''', default_components)
+        conn.commit()
+
     conn.close()
 
 
@@ -41,6 +76,32 @@ def home():
     conn.close()
 
     return render_template('index.html', products=products, is_admin=is_admin, search_query=search_query)
+
+
+@app.route('/reset_db')
+def reset_db():
+    conn = get_db()
+    conn.execute('DROP TABLE IF EXISTS components')
+    conn.execute('''
+                 CREATE TABLE components
+                 (
+                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                     name          TEXT NOT NULL,
+                     category      TEXT NOT NULL,
+                     price         TEXT NOT NULL,
+                     image_url     TEXT NOT NULL,
+                     description   TEXT NOT NULL,
+                     specs         TEXT NOT NULL,
+                     stock         INTEGER DEFAULT 0,
+                     datasheet_url TEXT
+                 )
+                 ''')
+    conn.commit()
+    conn.close()
+
+    # สั่งให้ใส่ข้อมูลเริ่มต้นเข้าไปใหม่ทันทีหลังจากล้างตาราง
+    update_db_structure()
+    return "ล้างฐานข้อมูลเก่าและอัปเกรดระบบคลังพร้อมตัวอย่างอะไหล่เริ่มต้นเรียบร้อยแล้ว! กดกลับหน้าหลักได้เลย"
 
 
 @app.route('/update_stock/<int:product_id>/<string:action>')
@@ -104,7 +165,6 @@ def add_product():
     return render_template('add.html', is_admin=is_admin)
 
 
-# 📝 1. ระบบแก้ไขข้อมูลอะไหล่ (เฉพาะแอดมิน)
 @app.route('/edit/<int:product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
     is_admin = request.args.get('admin') == 'true'
@@ -144,7 +204,6 @@ def edit_product(product_id):
     return render_template('edit.html', product=product, is_admin=is_admin)
 
 
-# ❌ 2. ระบบลบอะไหล่ออกจากคลังข้อมูล (เฉพาะแอดมิน)
 @app.route('/delete/<int:product_id>')
 def delete_product(product_id):
     is_admin = request.args.get('admin') == 'true'
