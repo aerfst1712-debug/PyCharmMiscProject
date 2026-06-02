@@ -43,30 +43,6 @@ def home():
     return render_template('index.html', products=products, is_admin=is_admin, search_query=search_query)
 
 
-# 🛠️ เส้นทางพิเศษสำหรับกดรีเซ็ตโครงสร้างตารางผ่านหน้าเว็บ
-@app.route('/reset_db')
-def reset_db():
-    conn = get_db()
-    conn.execute('DROP TABLE IF EXISTS components')
-    conn.execute('''
-                 CREATE TABLE components
-                 (
-                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                     name          TEXT NOT NULL,
-                     category      TEXT NOT NULL,
-                     price         TEXT NOT NULL,
-                     image_url     TEXT NOT NULL,
-                     description   TEXT NOT NULL,
-                     specs         TEXT NOT NULL,
-                     stock         INTEGER DEFAULT 0,
-                     datasheet_url TEXT
-                 )
-                 ''')
-    conn.commit()
-    conn.close()
-    return "ล้างฐานข้อมูลเก่าและอัปเกรดระบบคลัง 8 คอลัมน์เรียบร้อยแล้ว! กดกลับหน้าหลักได้เลย"
-
-
 @app.route('/update_stock/<int:product_id>/<string:action>')
 def update_stock(product_id, action):
     is_admin = request.args.get('admin') == 'true'
@@ -102,6 +78,8 @@ def product_detail(product_id):
 @app.route('/add', methods=['GET', 'POST'])
 def add_product():
     is_admin = request.args.get('admin') == 'true'
+    if not is_admin:
+        return abort(403)
 
     if request.method == 'POST':
         name = request.form['name']
@@ -124,6 +102,60 @@ def add_product():
         return redirect(url_for('home', admin='true'))
 
     return render_template('add.html', is_admin=is_admin)
+
+
+# 📝 1. ระบบแก้ไขข้อมูลอะไหล่ (เฉพาะแอดมิน)
+@app.route('/edit/<int:product_id>', methods=['GET', 'POST'])
+def edit_product(product_id):
+    is_admin = request.args.get('admin') == 'true'
+    if not is_admin:
+        return abort(403)
+
+    conn = get_db()
+    if request.method == 'POST':
+        name = request.form['name']
+        category = request.form['category']
+        price = request.form['price']
+        image_url = request.form['image_url']
+        description = request.form['description']
+        specs = request.form['specs']
+        stock = request.form.get('stock', 0, type=int)
+        datasheet_url = request.form.get('datasheet_url', '')
+
+        conn.execute('''
+                     UPDATE components
+                     SET name=?,
+                         category=?,
+                         price=?,
+                         image_url=?,
+                         description=?,
+                         specs=?,
+                         stock=?,
+                         datasheet_url=?
+                     WHERE id = ?
+                     ''', (name, category, price, image_url, description, specs, stock, datasheet_url, product_id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('product_detail', product_id=product_id, admin='true'))
+
+    cursor = conn.execute('SELECT * FROM components WHERE id = ?', (product_id,))
+    product = cursor.fetchone()
+    conn.close()
+    return render_template('edit.html', product=product, is_admin=is_admin)
+
+
+# ❌ 2. ระบบลบอะไหล่ออกจากคลังข้อมูล (เฉพาะแอดมิน)
+@app.route('/delete/<int:product_id>')
+def delete_product(product_id):
+    is_admin = request.args.get('admin') == 'true'
+    if not is_admin:
+        return abort(403)
+
+    conn = get_db()
+    conn.execute('DELETE FROM components WHERE id = ?', (product_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('home', admin='true'))
 
 
 if __name__ == '__main__':
