@@ -9,7 +9,7 @@
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
         h1, .navbar-brand { font-family: 'Chakra Petch', sans-serif; }
-        .form-box { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .form-box { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; }
         .form-control { background-color: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; }
         .form-control:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15); }
     </style>
@@ -18,12 +18,12 @@
 
     <div class="container my-5">
         <div class="col-lg-8 mx-auto">
-            <a href="/product/{{ product.id }}?admin=true" class="btn btn-outline-secondary btn-sm rounded-pill mb-4">⬅ ยกเลิกและกลับ</a>
+            <a href="/product/{{ product.id }}?pw={{ pw }}" class="btn btn-outline-secondary btn-sm rounded-pill mb-4">⬅ ยกเลิกและกลับ</a>
 
-            <div class="form-box p-4 p-md-5">
+            <div class="form-box p-4 p-md-5 shadow-sm">
                 <h1 class="fw-bold mb-4 text-dark text-center">✏️ แก้ไขข้อมูลเบอร์ IC: {{ product.name }}</h1>
 
-                <form action="/edit/{{ product.id }}?admin=true" method="POST">
+                <form action="/edit/{{ product.id }}?pw={{ pw }}" method="POST">
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">ชื่ออุปกรณ์ / เบอร์ IC</label>
