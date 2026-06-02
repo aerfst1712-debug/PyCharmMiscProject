@@ -18,7 +18,16 @@
 <body>
 
     <div class="container my-5">
-        <a href="/{% if is_admin %}?admin=true{% endif %}" class="btn btn-outline-secondary btn-sm rounded-pill mb-4">⬅ กลับหน้าหลัก</a>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <a href="/{% if is_admin %}?admin=true{% endif %}" class="btn btn-outline-secondary btn-sm rounded-pill">⬅ กลับหน้าหลัก</a>
+
+            {% if is_admin %}
+            <div class="d-flex gap-2">
+                <a href="/edit/{{ product.id }}?admin=true" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold">✏️ แก้ไขรายการ</a>
+                <a href="/delete/{{ product.id }}?admin=true" class="btn btn-danger btn-sm rounded-pill px-3 fw-bold" onclick="return confirm('ยืนยันที่จะลบอุปกรณ์นี้ออกจากคลังถาวรหรือไม่?')">🗑️ ลบรายการนี้</a>
+            </div>
+            {% endif %}
+        </div>
 
         <div class="main-box p-4 p-md-5">
             <div class="row g-5">
@@ -41,7 +50,7 @@
                     <h1 class="fw-bold text-dark display-5 mb-2">{{ product.name }}</h1>
 
                     <div class="d-flex gap-3 my-3 align-items-center">
-                        <h4 class="text-success fw-bold m-0">ราคาประเมิน: {{ product.price }}</h4>
+                        <h4 class="text-success fw-bold m-0">ราคา: {{ product.price }}</h4>
                         <div class="stock-box p-2 px-3 rounded">📦 ในคลังเหลือ: {{ product.stock or 0 }} ชิ้น</div>
                     </div>
 
