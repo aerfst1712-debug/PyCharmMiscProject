@@ -113,6 +113,5 @@ def add_product():
     return render_template('add.html', is_admin=is_admin)
 
 
-if __name__ == '__main__':
-    init_clean_db()  # สั่งเคลียร์และสร้างตารางโครงสร้างใหม่ทันที
+iif __name__ == '__main__':
     app.run(debug=True)
