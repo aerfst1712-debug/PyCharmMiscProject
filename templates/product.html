@@ -10,9 +10,9 @@
         body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
         h1, h3, .brand-title { font-family: 'Chakra Petch', sans-serif; }
         .main-box { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .spec-item { background-color: #f1f5f9; border-left: 4px solid #0284c7; color: #1e293b; font-weight: 500; }
+        .spec-item { background-color: #f1f5f9; border-left: 4px solid #0ea5e9; color: #1e293b; font-weight: 500; }
         .img-container { background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; }
-        .stock-box { border-left: 4px solid #059669; background-color: #ecfdf5; color: #065f46; font-weight: bold; }
+        .stock-box { border-left: 4px solid #10b981; background-color: #d1fae5; color: #065f46; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -21,14 +21,14 @@
         <a href="/{% if is_admin %}?admin=true{% endif %}" class="btn btn-outline-secondary btn-sm rounded-pill mb-4">⬅ กลับหน้าหลัก</a>
 
         <div class="main-box p-4 p-md-5">
-            <div class="row g-5 bg-transparent">
-                <div class="col-md-5 bg-transparent">
+            <div class="row g-5">
+                <div class="col-md-5">
                     <div class="img-container text-center mb-3">
                         <img src="{{ product.image_url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 320px; object-fit: contain;">
                     </div>
 
                     {% if product.datasheet_url %}
-                        <a href="{{ product.datasheet_url }}" target="_blank" class="btn btn-primary w-100 fw-bold py-2.5 rounded-pill shadow-sm" style="background-color: #0284c7;">
+                        <a href="{{ product.datasheet_url }}" target="_blank" class="btn btn-primary w-100 fw-bold py-2.5 rounded-pill shadow-sm" style="background-color: #0ea5e9; border: none;">
                             📄 เปิดดูไฟล์คู่มือ Datasheet (PDF)
                         </a>
                     {% else %}
@@ -36,30 +36,28 @@
                     {% endif %}
                 </div>
 
-                <div class="col-md-7 bg-transparent">
-                    <span class="badge bg-secondary mb-2 fs-6 px-3 rounded-pill">{{ product.category }}</span>
+                <div class="col-md-7">
+                    <span class="badge bg-primary mb-2 fs-6 px-3 rounded-pill" style="background-color: #0ea5e9 !important;">{{ product.category }}</span>
                     <h1 class="fw-bold text-dark display-5 mb-2">{{ product.name }}</h1>
 
-                    <div class="d-flex gap-3 my-3 bg-transparent align-items-center">
-                        <h4 class="text-secondary fw-bold m-0">ราคา: {{ product.price }}</h4>
+                    <div class="d-flex gap-3 my-3 align-items-center">
+                        <h4 class="text-success fw-bold m-0">ราคาประเมิน: {{ product.price }}</h4>
                         <div class="stock-box p-2 px-3 rounded">📦 ในคลังเหลือ: {{ product.stock or 0 }} ชิ้น</div>
                     </div>
 
-                    <hr class="text-muted">
+                    <hr>
 
-                    <h5 class="fw-bold text-dark mt-4">📌 คำอธิบายคุณลักษณะ:</h5>
-                    <p class="fs-6 lh-lg text-secondary" style="text-indent: 20px;">{{ product.description }}</p>
+                    <h5 class="fw-bold text-primary mt-4" style="color: #0ea5e9 !important;">📌 คำอธิบายคุณลักษณะ:</h5>
+                    <p class="fs-6 lh-lg text-secondary">{{ product.description }}</p>
 
-                    <h5 class="fw-bold text-dark mt-4 mb-3">🛠️ คุณสมบัติทางเทคนิค:</h5>
-                    <div class="row g-2 bg-transparent">
+                    <h5 class="fw-bold text-primary mt-4 mb-3" style="color: #0ea5e9 !important;">🛠️ คุณสมบัติทางเทคนิค (Datasheet Specifications):</h5>
+                    <div class="row g-2">
                         {% if product.specs %}
                             {% for spec in product.specs %}
-                                <div class="col-10 bg-transparent">
+                                <div class="col-12">
                                     <div class="spec-item p-2 px-3 rounded mb-1">✔️ {{ spec }}</div>
                                 </div>
                             {% endfor %}
-                        {% else %}
-                            <p class="text-muted italic">ไม่มีระบุข้อมูลเทคนิคเพิ่มเติม</p>
                         {% endif %}
                     </div>
                 </div>
