@@ -5,28 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เพิ่มอุปกรณ์ใหม่ - ElectroHub</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
         h1, .navbar-brand { font-family: 'Chakra Petch', sans-serif; }
-        .navbar { background-color: #1e293b !important; border-bottom: 2px solid #0ea5e9; }
-        .form-box { background-color: #1e293b; border: 1px solid #334155; border-radius: 16px; }
-        .form-control { background-color: #0f172a; border: 1px solid #475569; color: #fff; }
-        .form-control:focus { background-color: #0f172a; border-color: #34d399; color: #fff; box-shadow: none; }
-        .text-gradient { background: linear-gradient(45deg, #38bdf8, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .form-box { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .form-control { background-color: #fff; border: 1px solid #cbd5e1; color: #1e293b; }
+        .form-control:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.1); }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-dark">
-        <div class="container">
-            <a class="navbar-brand fw-bold fs-4" href="/">⚡ <span class="text-gradient">ElectroHub</span> Labs</a>
-        </div>
-    </nav>
-
     <div class="container my-5">
         <div class="col-lg-8 mx-auto">
-            <a href="/" class="btn btn-outline-light btn-sm rounded-pill mb-4">⬅ กลับหน้าหลัก</a>
+            <a href="/?admin=true" class="btn btn-outline-secondary btn-sm rounded-pill mb-4">⬅ กลับหน้าหลัก</a>
 
             {% with messages = get_flashed_messages() %}
               {% if messages %}
@@ -38,49 +30,48 @@
               {% endif %}
             {% endwith %}
 
-            <div class="form-box p-4 p-md-5 shadow-lg">
-                <h1 class="fw-bold mb-4 text-white">➕ เพิ่มข้อมูลอุปกรณ์ / เบอร์ IC ใหม่</h1>
+            <div class="form-box p-4 p-md-5">
+                <h1 class="fw-bold mb-4 text-dark text-center">➕ เพิ่มข้อมูลอุปกรณ์ / เบอร์ IC ใหม่</h1>
 
-                <form action="/add" method="POST">
+                <form action="/add?admin=true" method="POST">
                     <div class="row bg-transparent">
                         <div class="col-md-6 mb-3 bg-transparent">
-                            <label class="form-label text-info">ชื่ออุปกรณ์ / เบอร์ IC</label>
+                            <label class="form-label fw-bold">ชื่ออุปกรณ์ / เบอร์ IC</label>
                             <input type="text" class="form-control" name="name" value="{{ name or '' }}" placeholder="เช่น IC LM358" required>
                         </div>
                         <div class="col-md-6 mb-3 bg-transparent">
-                            <label class="form-label text-info">หมวดหมู่</label>
+                            <label class="form-label fw-bold">หมวดหมู่</label>
                             <input type="text" class="form-control" name="category" value="{{ category or '' }}" placeholder="เช่น Integrated Circuit" required>
                         </div>
                     </div>
 
                     <div class="row bg-transparent">
                         <div class="col-md-6 mb-3 bg-transparent">
-                            <label class="form-label text-info">ราคา (บาท)</label>
+                            <label class="form-label fw-bold">ราคา (บาท)</label>
                             <input type="text" class="form-control" name="price" value="{{ price or '' }}" placeholder="เช่น 20 บาท" required>
                         </div>
                         <div class="col-md-6 mb-3 bg-transparent">
-                            <label class="form-label text-info">ลิงก์รูปภาพตัวอย่าง (URL)</label>
+                            <label class="form-label fw-bold">ลิงก์รูปภาพตัวอย่าง (URL)</label>
                             <input type="url" class="form-control" name="image_url" value="{{ image_url or '' }}" placeholder="https://..." required>
                         </div>
                     </div>
 
                     <div class="mb-3 bg-transparent">
-                        <label class="form-label text-info">คำอธิบายรายละเอียด</label>
+                        <label class="form-label fw-bold">คำอธิบายรายละเอียด</label>
                         <textarea class="form-control" name="description" rows="3" placeholder="อธิบายหน้าที่การทำงานเบื้องต้น..." required>{{ description or '' }}</textarea>
                     </div>
 
                     <div class="mb-3 bg-transparent">
-                        <label class="form-label text-info">คุณสมบัติทางเทคนิค (แยกด้วยเครื่องหมายจุลภาค , )</label>
+                        <label class="form-label fw-bold">คุณสมบัติทางเทคนิค (แยกด้วยเครื่องหมายจุลภาค , )</label>
                         <textarea class="form-control" name="specs" rows="2" placeholder="เช่น ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 5V" required>{{ specs or '' }}</textarea>
                     </div>
 
-                    <div class="mb-4 bg-transparent p-3 rounded border border-danger">
+                    <div class="mb-4 bg-transparent p-3 rounded border border-danger bg-light">
                         <label class="form-label text-danger fw-bold">🔑 รหัสผ่านผู้ดูแลระบบ (Admin Password)</label>
-                        <input type="password" class="form-control" name="password" placeholder="กรอกรหัสลับเพื่อยืนยันตัวตนก่อนบันทึก" style="border-color: #ef4444;" required>
-                        <small class="text-muted">เฉพาะคุณที่มีรหัสผ่านนี้เท่านั้นที่จะสามารถบันทึกชิ้นส่วนเข้าสู่ระบบได้</small>
+                        <input type="password" class="form-control" name="password" placeholder="กรอกรหัสลับเพื่อยืนยันตัวตนก่อนบันทึก" style="border-color: #f87171;" required>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2.5">💾 บันทึกข้อมูลเข้าฐานข้อมูล</button>
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2.5" style="background-color: #0284c7;">💾 บันทึกข้อมูลเข้าฐานข้อมูลออนไลน์</button>
                 </form>
             </div>
         </div>
