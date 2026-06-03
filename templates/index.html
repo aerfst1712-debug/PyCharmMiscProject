@@ -8,188 +8,217 @@
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
-        h1, h2, h3, .navbar-brand, .stat-num, .modal-title { font-family: 'Chakra Petch', sans-serif; }
+        h1, h2, h3, .navbar-brand, .stat-num, .hero-title { font-family: 'Chakra Petch', sans-serif; }
         .navbar { background-color: #ffffff !important; border-bottom: 2px solid #0ea5e9; }
-        .stat-card { background: white; border-radius: 14px; border: 1px solid #e2e8f0; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .stat-num { font-size: 2.2rem; font-weight: bold; color: #0ea5e9; }
-        .product-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; overflow: hidden; }
-        .product-card:hover { transform: translateY(-6px); box-shadow: 0 12px 20px -3px rgba(14, 165, 233, 0.15); border-color: #0ea5e9; }
-        .price-tag { color: #059669; font-weight: bold; font-size: 1.15rem; }
-        .btn-view { background-color: #f1f5f9; color: #0284c7; border-radius: 20px; font-weight: bold; border: 1px solid #e2e8f0; text-decoration: none; display: inline-block; text-center: center; }
-        .btn-view:hover { background-color: #e2e8f0; }
-        .btn-buy-now { background-color: #0ea5e9; color: #ffffff; border-radius: 20px; font-weight: bold; border: none; }
-        .btn-buy-now:hover { background-color: #0284c7; }
+
+        /* 🌟 แต่งหน้าเว็บบริเวณบนสุดให้มีสีสันสวยเฉี่ยว ดุดัน ไม่โล่ง */
+        .hero-banner { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border-radius: 24px; position: relative; overflow: hidden; }
+        .hero-banner::before { content: ''; position: absolute; top: -50%; right: -20%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(14,165,233,0.15) 0%, transparent 70%); }
+
+        .stat-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); transition: all 0.2s; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+        .stat-num { font-size: 2rem; font-weight: bold; color: #0ea5e9; }
+
+        .product-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
+        .product-card:hover { transform: translateY(-6px); box-shadow: 0 12px 24px -4px rgba(14, 165, 233, 0.16); border-color: #0ea5e9; }
+
+        .price-tag { color: #059669; font-weight: bold; font-size: 1.2rem; }
         .admin-actions { position: absolute; top: 12px; right: 12px; z-index: 10; display: flex; gap: 6px; }
-        .log-box { background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .cart-badge { background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; position: absolute; top: -5px; right: -5px; }
-        .progress { height: 8px; border-radius: 10px; background-color: #e2e8f0; }
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1100; }
     </style>
 </head>
 <body>
+
+    <!-- Toast Component สำหรับยกระดับการแจ้งเตือนแทนคำสั่ง Alert -->
+    <div class="toast-container">
+        <div id="liveToast" class="toast align-items-center text-white bg-dark border-0 rounded-pill p-1" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body fw-bold px-3" id="toastMessage">📌 ข้อความแจ้งเตือน</div>
+                <button type="button" class="btn-close btn-close-white m-auto me-2" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
 
     <nav class="navbar navbar-light p-3 shadow-sm sticky-top">
         <div class="container">
             <a class="navbar-brand fw-bold fs-3" href="/">⚡ ElectroHub <span style="color: #0ea5e9;">Labs</span></a>
             <div class="d-flex align-items-center gap-2">
                 <button class="btn btn-outline-dark rounded-pill position-relative px-3 fw-bold btn-sm me-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartSidebar">
-                    🛒 ตะกร้าของฉัน <span id="cartCountBadge" class="cart-badge d-none">0</span>
+                    🛒 ตะกร้าใบเบิก <span id="cartCountBadge" class="cart-badge d-none">0</span>
                 </button>
 
                 {% if not is_admin %}
                 <form method="POST" action="/login" class="d-flex gap-1 align-items-center">
                     <input type="password" name="password" class="form-control form-control-sm rounded-pill" style="width: 120px;" placeholder="รหัสแอดมินลับ">
-                    <button type="submit" class="btn btn-dark btn-sm rounded-pill px-2">🔒 เข้าสู่ระบบ</button>
+                    <button type="submit" class="btn btn-dark btn-sm rounded-pill px-2">🔒 Login</button>
                 </form>
                 {% else %}
                     <span class="badge bg-danger rounded-pill px-2.5 py-1.5 small fw-bold">👷 Admin Mode</span>
                     <a href="/add" class="btn btn-success btn-sm rounded-pill px-2.5 fw-bold text-decoration-none">➕ เพิ่มสินค้า</a>
-                    <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-2.5 text-decoration-none">ออกจากระบบ 🚪</a>
+                    <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-2.5 text-decoration-none">ออก 🚪</a>
                 {% endif %}
             </div>
         </div>
     </nav>
 
+    <!-- Sidebar ตะกร้าพัสดุ -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="cartSidebar" style="width: 380px;">
         <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title fw-bold">🛒 ตะกร้าสินค้าของคุณ</h5>
+            <h5 class="offcanvas-title fw-bold">🛒 รายการเตรียมเบิกชิ้นส่วน</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column">
             <div class="d-flex justify-content-end mb-2">
-                <button id="clearCartBtn" class="btn btn-link btn-sm text-secondary d-none p-0" onclick="clearCart()">🗑️ ล้างสินค้าทั้งหมด</button>
+                <button id="clearCartBtn" class="btn btn-link btn-sm text-secondary d-none p-0" onclick="clearCart()">🗑️ ล้างรายการทั้งหมด</button>
             </div>
             <div id="cartItemsList" class="flex-grow-1 overflow-auto">
-                <p class="text-muted text-center my-5">ไม่มีสินค้าในตะกร้าขณะนี้</p>
+                <p class="text-muted text-center my-5">ไม่มีพัสดุในตะกร้าเบิกขณะนี้</p>
             </div>
             <div class="border-top pt-3 mt-auto">
                 <div class="d-flex justify-content-between mb-3">
-                    <span class="fw-bold">ยอดเงินรวม:</span>
+                    <span class="fw-bold">มูลค่ารวมบิล:</span>
                     <span id="cartTotalPrice" class="fw-bold text-success fs-5">0 บาท</span>
                 </div>
                 <button id="checkoutBtn" class="btn btn-primary w-100 rounded-pill fw-bold py-2.5 d-none" onclick="processCheckout()">
-                    💳 ยืนยันคำสั่งซื้อ (และตัดสต็อก)
+                    💳 ยืนยันคำสั่งซื้อ (และตัดสต็อกสินค้า)
                 </button>
             </div>
         </div>
     </div>
 
-    <div class="container my-5">
-        <div class="row g-3 mb-4">
-            <div class="col-md-3 col-6">
+    <div class="container my-4">
+        <!-- 🌟 Hero Section โฉมใหม่ ลบความจืดชืดและลดความโล่งของเว็บไซต์ -->
+        <div class="hero-banner p-4 p-md-5 mb-5 shadow">
+            <div class="row align-items-center">
+                <div class="col-md-7">
+                    <h1 class="hero-title fw-bold display-5 text-warning mb-2">ระบบจัดการคลังพัสดุอัจฉริยะ</h1>
+                    <p class="fs-5 text-light-50 opacity-75 mb-4">สืบค้นสเปก วิเคราะห์รายการเบอร์อะไหล่อิเล็กทรอนิกส์ ควบคุมปริมาณสต็อก และออกเอกสารใบเบิกคลังได้อย่างมีประสิทธิภาพแม่นยำ 100%</p>
+                    <form action="/" method="GET" class="d-flex gap-2" style="max-width: 500px;">
+                        <input type="text" name="search" class="form-control rounded-pill px-4" placeholder="🔍 ค้นหาเบอร์ชิ้นส่วน ข้อมูลสเปก หรือหมวดหมู่..." value="{{ search_query }}">
+                        <button type="submit" class="btn btn-info rounded-pill px-4 fw-bold text-white">ค้นหา</button>
+                    </form>
+                </div>
+                <div class="col-md-5 d-none d-md-block text-center">
+                    <span style="font-size: 7rem;">⚡</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard สรุปผลคลังสินค้า รวมถึงฟีเจอร์คำนวณราคามูลค่าสินทรัพย์รวม -->
+        <div class="row g-3 mb-5">
+            <div class="col-md-2 col-6">
                 <div class="stat-card">
-                    <div class="text-muted small fw-bold">📦 เบอร์อะไหล่ทั้งหมด</div>
+                    <div class="text-muted small fw-bold">📦 จำนวนรายการ</div>
                     <div class="stat-num text-dark">{{ total_items }}</div>
                 </div>
             </div>
-            <div class="col-md-3 col-6">
+            <div class="col-md-2 col-6">
                 <div class="stat-card">
-                    <div class="text-muted small fw-bold">🔢 จำนวนรวมในคลัง</div>
+                    <div class="text-muted small fw-bold">🔢 ยอดพัสดุรวม</div>
                     <div class="stat-num text-primary">{{ total_stock }}</div>
                 </div>
             </div>
-            <div class="col-md-3 col-6">
+            <div class="col-md-3 col-12">
+                <div class="stat-card border-success" style="background-color: #f0fdf4;">
+                    <div class="text-muted small fw-bold text-success">💰 มูลค่ารวมของคลังสินค้า</div>
+                    <div class="stat-num text-success" style="font-size: 1.8rem;">{{ "{:,}".format(total_warehouse_value) }} บาท</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
                 <div class="stat-card border-warning" style="background-color: #fffdf5;">
-                    <div class="text-muted small fw-bold text-warning">⚠️ รายการใกล้หมด (&lt;5)</div>
+                    <div class="text-muted small fw-bold text-warning">⚠️ ใกล้หมดคลัง</div>
                     <div class="stat-num text-warning">{{ low_stock_count }}</div>
                 </div>
             </div>
             <div class="col-md-3 col-6">
                 <div class="stat-card border-danger" style="background-color: #fff5f5;">
-                    <div class="text-muted small fw-bold text-danger">🚨 รายการที่หมดคลัง</div>
+                    <div class="text-muted small fw-bold text-danger">🚨 สินค้าหมดสต็อกคลัง</div>
                     <div class="stat-num text-danger">{{ out_of_stock_count }}</div>
                 </div>
             </div>
         </div>
 
+        <!-- 🌟 ฟีเจอร์: แดชบอร์ดพิเศษเครื่องมือของกลุ่มแอดมินสำหรับดาวน์โหลด/อัปโหลดไฟล์สำรองข้อมูล CSV -->
         {% if is_admin %}
-        <div class="d-flex justify-content-end mb-4">
-            <a href="/export_report" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm text-decoration-none" style="background-color: #0ea5e9; border:none;">
-                📥 ดาวน์โหลดรายงานสต็อก (.CSV Excel)
-            </a>
+        <div class="card p-3 mb-5 bg-light border-0 rounded-4 shadow-sm">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <h6 class="fw-bold m-0 text-secondary">📦 ศูนย์ควบคุมข้อมูลสำรอง (Database Backup Tools)</h6>
+                    <small class="text-muted">ดาวน์โหลดเก็บไว้ หรือเลือกอัปโหลดกลับเข้ามาเพื่อป้องกันข้อมูลสูญหายเมื่อระบบ Render รีเฟรชตัวฟรี</small>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <a href="/export_report" class="btn btn-sm btn-dark rounded-pill px-3 fw-bold text-decoration-none">📥 ดาวน์โหลดมาเก็บไว้ (.CSV)</a>
+                    <form action="/import_report" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-1 m-0">
+                        <input type="file" name="backup_file" class="form-control form-control-sm rounded-pill" style="max-width: 180px;" accept=".csv" required>
+                        <button type="submit" class="btn btn-sm btn-danger rounded-pill fw-bold px-3" onclick="return confirm('คำเตือน: การอัปโหลดไฟล์นี้จะเขียนข้อมูลพัสดุหลักทับคลังเดิมทั้งหมด ยืนยันกู้คืนใช่ไหม?')">🔄 กู้ข้อมูล</button>
+                    </form>
+                </div>
+            </div>
         </div>
         {% endif %}
 
-        <div class="text-center mb-5">
-            <h1 class="fw-bold mb-2">📦 คลังข้อมูลส่วนประกอบอิเล็กทรอนิกส์</h1>
-            <p class="text-muted">สืบค้นสเปก รายละเอียดชิ้นส่วน และข้อมูลทางเทคนิคได้อย่างรวดเร็ว</p>
-
-            <form action="/" method="GET" class="d-flex gap-2 justify-content-center mt-4" style="max-width: 600px; margin: 0 auto;">
-                <input type="text" name="search" class="form-control rounded-pill px-4 shadow-sm" placeholder="🔍 พิมพ์ชื่อเบอร์ IC หรือหมวดหมู่เพื่อค้นหา..." value="{{ search_query }}">
-                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" style="background-color: #0ea5e9; border: none;">ค้นหา</button>
-            </form>
-        </div>
-
-        <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
-            <a href="/" class="btn rounded-pill px-3 fw-bold btn-sm text-decoration-none {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ทั้งหมด</a>
+        <div class="d-flex flex-wrap gap-2 justify-content-center mb-4">
+            <a href="/" class="btn rounded-pill px-3 fw-bold btn-sm text-decoration-none {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ดูทั้งหมด</a>
             {% for cat in categories %}
                 <a href="/?category={{ cat }}" class="btn rounded-pill px-3 fw-bold btn-sm text-decoration-none {% if current_category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if current_category == cat %}background-color: #0ea5e9; border:none;{% endif %}">{{ cat }}</a>
             {% endfor %}
         </div>
 
+        <!-- แสดงผลรายการการ์ดพัสดุ -->
         <div class="row g-4 mb-5">
             {% if products %}
                 {% for product in products %}
                 <div class="col-md-4 col-sm-6">
                     <div class="product-card h-100 shadow-sm p-3">
-
                         {% if is_admin %}
                         <div class="admin-actions">
-                            <a href="/edit/{{ product.id }}" class="btn btn-warning btn-sm rounded-circle shadow text-decoration-none" title="แก้ไข">✏️</a>
-                            <a href="/delete/{{ product.id }}" class="btn btn-danger btn-sm rounded-circle shadow text-decoration-none" title="ลบ" onclick="return confirm('ต้องการลบชิ้นส่วนนี้?')">🗑️</a>
+                            <a href="/edit/{{ product.id }}" class="btn btn-warning btn-sm rounded-circle shadow text-decoration-none">✏️</a>
+                            <a href="/delete/{{ product.id }}" class="btn btn-danger btn-sm rounded-circle shadow text-decoration-none" onclick="return confirm('ลบข้อมูลชิ้นส่วนนี้?')">🗑️</a>
                         </div>
                         {% endif %}
 
                         <div class="text-center mb-3">
-                            <img src="{{ product.image_url }}" class="rounded p-2" id="prod-img-{{ product.id }}" alt="{{ product.name }}" style="height: 160px; width: 100%; object-fit: contain; background: #f8fafc;">
+                            <img src="{{ product.image_url }}" class="rounded p-2" id="prod-img-{{ product.id }}" alt="{{ product.name }}" style="height: 150px; width: 100%; object-fit: contain; background: #f8fafc;">
                         </div>
 
                         <div class="card-body d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="badge bg-light text-primary border border-primary-subtle" id="prod-cat-{{ product.id }}">{{ product.category }}</span>
-
+                                <span class="badge bg-light text-primary border border-primary-subtle">{{ product.category }}</span>
                                 {% if (product.stock or 0) >= 15 %}
-                                    <span class="badge bg-success-subtle text-success rounded-pill">🟢 คลังแน่น: {{ product.stock or 0 }} ชิ้น</span>
+                                    <span class="badge bg-success-subtle text-success rounded-pill">🟢 ในคลัง: {{ product.stock }} ชิ้น</span>
                                 {% elif (product.stock or 0) > 0 %}
-                                    <span class="badge bg-warning-subtle text-warning rounded-pill">🟡 ใกล้หมด: {{ product.stock or 0 }} ชิ้น</span>
+                                    <span class="badge bg-warning-subtle text-warning rounded-pill">🟡 ใกล้หมด: {{ product.stock }} ชิ้น</span>
                                 {% else %}
-                                    <span class="badge bg-danger-subtle text-danger rounded-pill">🔴 สินค้าหมดคลัง</span>
+                                    <span class="badge bg-danger-subtle text-danger rounded-pill">🔴 หมดสต็อก</span>
                                 {% endif %}
                             </div>
 
                             <h4 class="card-title mb-2 text-dark fw-bold" id="prod-name-{{ product.id }}">{{ product.name }}</h4>
-
-                            <div class="mb-3">
-                                {% set stock_pct = ((product.stock or 0) / 100 * 100) if (product.stock or 0) <= 100 else 100 %}
-                                <div class="progress">
-                                    <div class="progress-bar {% if (product.stock or 0) >= 15 %}bg-success{% elif (product.stock or 0) > 0 %}bg-warning{% else %}bg-danger{% endif %}"
-                                         role="progressbar" style="width: {{ stock_pct }}%"></div>
-                                </div>
-                            </div>
-
                             <p class="card-text text-muted text-truncate mb-3 small">{{ product.description }}</p>
 
                             {% if is_admin %}
                             <div class="d-flex gap-1 align-items-center mb-3 justify-content-center border-top border-bottom py-2">
-                                <span class="small text-muted me-2">🛠️ ปรับยอด:</span>
+                                <span class="small text-muted me-2">🛠️ สต็อกด่วน:</span>
                                 <a href="/update_stock/{{ product.id }}/decrease" class="btn btn-outline-danger btn-sm rounded-circle fw-bold text-decoration-none {% if (product.stock or 0) <= 0 %}disabled{% endif %}" style="width: 28px; height: 28px; line-height: 12px;">-</a>
                                 <span class="fw-bold mx-2">{{ product.stock or 0 }}</span>
                                 <a href="/update_stock/{{ product.id }}/increase" class="btn btn-outline-success btn-sm rounded-circle fw-bold text-decoration-none" style="width: 28px; height: 28px; line-height: 12px;">+</a>
                             </div>
                             {% endif %}
 
-                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mt-auto pt-2">
                                 <span class="price-tag">💰 <span id="prod-price-{{ product.id }}">{{ product.price }}</span> บาท</span>
                             </div>
 
                             <div class="row g-2 mt-2">
                                 <div class="col-5">
-                                    <a href="/product/{{ product.id }}" class="btn btn-view btn-sm w-100 py-2 fw-bold">🔬 รายละเอียด</a>
+                                    <a href="/product/{{ product.id }}" class="btn btn-outline-secondary rounded-pill btn-sm w-100 py-2 fw-bold text-decoration-none">🔬 สเปกเต็ม</a>
                                 </div>
                                 <div class="col-7">
                                     {% if (product.stock or 0) > 0 %}
-                                        <button class="btn btn-buy-now btn-sm w-100 py-2 fw-bold" onclick="addToCart('{{ product.id }}', '{{ product.stock }}')">🛒 หยิบใส่ตะกร้า</button>
+                                        <button class="btn btn-primary rounded-pill btn-sm w-100 py-2 fw-bold" style="background-color: #0ea5e9; border:none;" onclick="addToCart('{{ product.id }}', '{{ product.stock }}')">🛒 หยิบใส่ตะกร้า</button>
                                     {% else %}
-                                        <button class="btn btn-secondary btn-sm w-100 py-2 fw-bold" disabled>❌ สินค้าหมด</button>
+                                        <button class="btn btn-secondary rounded-pill btn-sm w-100 py-2 fw-bold" disabled>❌ ของหมดคลัง</button>
                                     {% endif %}
                                 </div>
                             </div>
@@ -198,25 +227,55 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="text-center my-5 py-5 w-100"><h3 class="text-muted">❌ ไม่พบส่วนประกอบอิเล็กทรอนิกส์ในกลุ่มนี้</h3></div>
+                <div class="text-center my-5 py-5 w-100"><h3 class="text-muted">❌ ไม่พบส่วนประกอบอิเล็กทรอนิกส์ที่คุณต้องการ</h3></div>
             {% endif %}
         </div>
 
-        <div class="log-box shadow-sm">
-            <h5 class="fw-bold mb-3 text-secondary">📋 บันทึกกิจกรรมการจัดการคลังล่าสุด (Stock Logs)</h5>
-            <div class="table-responsive">
-                <table class="table table-hover table-sm m-0 small text-secondary">
-                    <thead class="table-light"><tr><th>เวลาจัดทำกิจกรรม</th><th>รายการเบอร์ IC</th><th>กิจกรรมการดำเนินงาน</th></tr></thead>
-                    <tbody>
-                        {% if logs %}
-                            {% for log in logs %}
-                            <tr><td><code>🕒 {{ log.timestamp }}</code></td><td class="fw-bold text-dark">{{ log.component_name }}</td><td>{{ log.action_type }}</td></tr>
+        <div class="row g-4">
+            <!-- 🌟 ฟีเจอร์: บล็อกประวัติบิลสั่งซื้อและเบิกพัสดุ เพื่อให้กดคลิกเข้าไปดูและตรวจสอบความสมบูรณ์ย้อนหลังได้ -->
+            <div class="col-md-6">
+                <div class="bg-white border p-4 rounded-4 shadow-sm h-100">
+                    <h5 class="fw-bold mb-3 text-dark">📄 ประวัติใบสั่งซื้อ/ใบเบิกคลังล่าสุด</h5>
+                    <div class="list-group list-group-flush">
+                        {% if recent_orders %}
+                            {% for order in recent_orders %}
+                            <a href="/order/{{ order.id }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0 py-2.5">
+                                <div>
+                                    <span class="fw-bold text-primary">📄 บิลใบเบิก #{{ order.id }}</span><br>
+                                    <small class="text-muted">📅 {{ order.order_date }}</small>
+                                </div>
+                                <span class="badge bg-success-subtle text-success rounded-pill fw-bold">{{ "{:,}".format(order.total_price) }} บาท 🔍</span>
+                            </a>
                             {% endfor %}
                         {% else %}
-                            <tr><td colspan="3" class="text-center py-2 text-muted">ยังไม่มีประวัติการทำกิจกรรมคลังสินค้าในเวลานี้</td></tr>
+                            <p class="text-muted small py-3 text-center">ยังไม่มีบันทึกข้อมูลใบเบิกในระบบหลังบ้าน</p>
                         {% endif %}
-                    </tbody>
-                </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- กล่องแสดงผลประวัติ Logs กิจกรรมคลัง -->
+            <div class="col-md-6">
+                <div class="bg-white border p-4 rounded-4 shadow-sm h-100">
+                    <h5 class="fw-bold mb-3 text-secondary">📋 บันทึกประวัติกิจกรรมสต็อก (Logs)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm m-0 small text-secondary">
+                            <tbody>
+                                {% if logs %}
+                                    {% for log in logs %}
+                                    <tr>
+                                        <td><small class="text-muted">🕒 {{ log.timestamp }}</small></td>
+                                        <td class="fw-bold text-dark">{{ log.component_name }}</td>
+                                        <td><small>{{ log.action_type }}</small></td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr><td class="text-center py-3 text-muted">ยังไม่มีประวัติกิจกรรม</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -226,13 +285,21 @@
         let cart = JSON.parse(localStorage.getItem('electrohub_cart')) || [];
         updateCartUI();
 
+        // 🌟 ฟังก์ชันแสดงผลป๊อปอัปแจ้งเตือนสวยๆ แทนการใช้กล่อง Alert ดับชีวิตหน้าจอแบบเดิม
+        function showNotification(message) {
+            document.getElementById('toastMessage').innerText = message;
+            let toastEl = document.getElementById('liveToast');
+            let toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+
         function addToCart(id, maxStock) {
             maxStock = parseInt(maxStock);
             let productInCart = cart.find(item => item.id === id);
 
             if (productInCart) {
                 if (productInCart.qty >= maxStock) {
-                    alert(`ขออภัย! คลังออนไลน์มีสินค้าชิ้นนี้อยู่สูงสุดเพียง ${maxStock} ชิ้นเท่านั้น`);
+                    showNotification(`⚠️ คลังออนไลน์มีสินค้าชิ้นนี้อยู่สูงสุดเพียง ${maxStock} ชิ้น`);
                     return;
                 }
                 productInCart.qty += 1;
@@ -240,23 +307,24 @@
                 let name = document.getElementById(`prod-name-${id}`).innerText;
                 let img = document.getElementById(`prod-img-${id}`).src;
                 let priceNum = parseInt(document.getElementById(`prod-price-${id}`).innerText) || 0;
-
                 cart.push({ id: id, name: name, img: img, price: priceNum, maxStock: maxStock, qty: 1 });
             }
             saveCartAndRefresh();
-            new bootstrap.Offcanvas(document.getElementById('cartSidebar')).show();
+            showNotification(`🛒 เพิ่มพัสดุชิ้นนี้เข้าสู่รายการเตรียมเบิกแล้ว`);
         }
 
         function clearCart() {
             if (confirm('คุณต้องการเคลียร์สินค้าทั้งหมดออกจากตะกร้าใช่หรือไม่?')) {
                 cart = [];
                 saveCartAndRefresh();
+                showNotification('🗑️ ล้างตะกร้าเรียบร้อยแล้ว');
             }
         }
 
         function removeFromCart(id) {
             cart = cart.filter(item => item.id !== id);
             saveCartAndRefresh();
+            showNotification('🗑️ นำสินค้าออกจากรายการแล้ว');
         }
 
         function changeQty(id, action) {
@@ -264,7 +332,7 @@
             if (item) {
                 if (action === 'increase') {
                     if (item.qty >= item.maxStock) {
-                        alert(`ไม่สามารถเพิ่มได้เกินจำนวนสต็อกจริงได้`);
+                        showNotification('⚠️ ไม่สามารถสั่งซื้อเกินยอดในคลังข้อมูลสต็อกจริง');
                         return;
                     }
                     item.qty += 1;
@@ -305,9 +373,9 @@
                 clearBtn.classList.add('d-none');
             }
 
-            totalLabel.innerText = totalPrice + ' บาท';
+            totalLabel.innerText = totalPrice.toLocaleString() + ' บาท';
             if (cart.length === 0) {
-                listContainer.innerHTML = '<p class="text-muted text-center my-5">ไม่มีสินค้าในตะกร้าขณะนี้</p>';
+                listContainer.innerHTML = '<p class="text-muted text-center my-5">ไม่มีพัสดุในตะกร้าเบิกขณะนี้</p>';
                 return;
             }
 
@@ -315,19 +383,19 @@
             cart.forEach(item => {
                 html += `
                     <div class="d-flex align-items-center justify-content-between p-2 mb-3 border-bottom">
-                        <img src="${item.img}" style="width: 50px; height: 50px; object-fit: contain; background-color: #f8fafc; border-radius: 6px;" class="me-2">
+                        <img src="${item.img}" style="width: 45px; height: 45px; object-fit: contain; background-color: #f8fafc; border-radius: 6px;" class="me-2">
                         <div class="flex-grow-1">
                             <h6 class="mb-0 fw-bold text-dark small">${item.name}</h6>
                             <small class="text-muted">${item.price} บาท/ชิ้น</small>
                             <div class="d-flex align-items-center gap-1 mt-1">
-                                <button class="btn btn-outline-secondary btn-xs py-0 px-2 rounded" onclick="changeQty('${item.id}', 'decrease')">-</button>
+                                <button class="btn btn-outline-secondary py-0 px-2 btn-sm rounded" onclick="changeQty('${item.id}', 'decrease')">-</button>
                                 <span class="px-2 small fw-bold">${item.qty}</span>
-                                <button class="btn btn-outline-secondary btn-xs py-0 px-2 rounded" onclick="changeQty('${item.id}', 'increase')">+</button>
+                                <button class="btn btn-outline-secondary py-0 px-2 btn-sm rounded" onclick="changeQty('${item.id}', 'increase')">+</button>
                             </div>
                         </div>
                         <div class="text-end">
-                            <div class="fw-bold text-success small">${item.price * item.qty} บาท</div>
-                            <button class="btn btn-link btn-sm text-danger p-0 mt-1" onclick="removeFromCart('${item.id}')">ลบ</button>
+                            <div class="fw-bold text-success small">${(item.price * item.qty).toLocaleString()} บ.</div>
+                            <button class="btn btn-link btn-sm text-danger p-0 mt-1 text-decoration-none small" onclick="removeFromCart('${item.id}')">ลบออก</button>
                         </div>
                     </div>
                 `;
@@ -337,10 +405,10 @@
 
         function processCheckout() {
             if (cart.length === 0) return;
-            if (!confirm('ยืนยันรายการเพื่อสั่งซื้อและตัดสต็อกสินค้าออกจากระบบ?')) return;
+            if (!confirm('ยืนยันบันทึกใบเบิกพัสดุและทำรายการหักจำนวนคลังสะสม?')) return;
 
             document.getElementById('checkoutBtn').disabled = true;
-            document.getElementById('checkoutBtn').innerText = 'กำลังบันทึกสต็อก...';
+            document.getElementById('checkoutBtn').innerText = 'ระบบกำลังบันทึกใบเบิก...';
 
             fetch('/checkout', {
                 method: 'POST',
@@ -353,18 +421,16 @@
                     alert(data.message);
                     cart = [];
                     saveCartAndRefresh();
-                    bootstrap.Offcanvas.getInstance(document.getElementById('cartSidebar')).hide();
                     location.reload();
                 } else {
-                    alert('คำสั่งซื้อล้มเหลว: ' + data.message);
+                    alert('เกิดความล้มเหลว: ' + data.message);
                     document.getElementById('checkoutBtn').disabled = false;
-                    document.getElementById('checkoutBtn').innerText = '💳 ยืนยันคำสั่งซื้อ (และตัดสต็อก)';
+                    document.getElementById('checkoutBtn').innerText = '💳 ยืนยันคำสั่งซื้อ (และตัดสต็อกสินค้า)';
                 }
             })
             .catch(err => {
-                alert('เกิดข้อผิดพลาด: ' + err);
+                alert('ข้อผิดพลาดระบบเครือข่าย: ' + err);
                 document.getElementById('checkoutBtn').disabled = false;
-                document.getElementById('checkoutBtn').innerText = '💳 ยืนยันคำสั่งซื้อ (และตัดสต็อก)';
             });
         }
     </script>
