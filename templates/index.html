@@ -138,7 +138,6 @@
 
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-4">
             <a href="/" class="btn rounded-pill px-3 fw-bold btn-sm text-decoration-none {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ดูทั้งหมด</a>
-            {% endfor %}
             {% for cat in categories %}
                 <a href="/?category={{ cat }}" class="btn rounded-pill px-3 fw-bold btn-sm text-decoration-none {% if current_category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if current_category == cat %}background-color: #0ea5e9; border:none;{% endif %}">{{ cat }}</a>
             {% endfor %}
@@ -388,7 +387,6 @@
                 if (data.success) {
                     cart = [];
                     saveCartAndRefresh();
-                    // 🌟 วาร์ปไปที่หน้าใบออเดอร์ Hybrid สรุปผลทันที
                     window.location.href = `/order/${data.order_id}`;
                 } else {
                     alert('เกิดความล้มเหลว: ' + data.message);
