@@ -163,3 +163,13 @@ def receipt(order_id):
 if __name__ == '__main__':
     update_db_structure()
     app.run(debug=True)
+
+
+    @app.route('/admin-login', methods=['GET', 'POST'])
+    def admin_login():
+        if request.method == 'POST':
+            if request.form.get('password') == ADMIN_PASSWORD:
+                session['is_admin'] = True
+                return redirect(url_for('home'))
+            flash('รหัสผ่านไม่ถูกต้อง!', 'danger')
+        return render_template('login.html')
