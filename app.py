@@ -2,7 +2,6 @@ import os
 from flask import Flask, render_template, request, redirect, jsonify, session
 import sqlite3
 from datetime import datetime
-import ่json
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
