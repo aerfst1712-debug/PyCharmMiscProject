@@ -11,11 +11,10 @@
         h1, h2, h3, .navbar-brand, .stat-num, .modal-title { font-family: 'Chakra Petch', sans-serif; }
         .navbar { background-color: #ffffff !important; border-bottom: 2px solid #0ea5e9; }
 
-        /* 📈 แผง Dashboard สรุปยอดด้านบนเพื่อลดความโล่งของเว็บไซต์ */
         .stat-card { background: white; border-radius: 14px; border: 1px solid #e2e8f0; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .stat-num { font-size: 2.2rem; font-weight: bold; color: #0ea5e9; }
 
-        /* ✨ [HOVER EFFECT] การ์ดลอยตัวและเพิ่มเงานุ่มนวลเมื่อเอาเมาส์ไปชี้ */
+        /* ✨ Hover Effect การ์ดลอยตัวและเพิ่มเงานุ่มนวล */
         .product-card {
             background-color: #ffffff;
             border: 1px solid #e2e8f0;
@@ -39,8 +38,6 @@
         .log-box { background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .cart-badge { background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; position: absolute; top: -5px; right: -5px; }
         .spec-badge { background-color: #f1f5f9; border-left: 4px solid #0ea5e9; color: #1e293b; font-weight: 500; padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; }
-
-        /* ตกแต่งแถบความก้าวหน้า Progress Bar ให้สวยงาม */
         .progress { height: 8px; border-radius: 10px; background-color: #e2e8f0; }
     </style>
 </head>
@@ -126,29 +123,41 @@
 
     <div class="container my-5">
 
-        <div class="row g-3 mb-4">
-            <div class="col-md-3 col-6">
-                <div class="stat-card">
-                    <div class="text-muted small fw-bold">📦 เบอร์อะไหล่ทั้งหมด</div>
-                    <div class="stat-num text-dark">{{ total_items }}</div>
+        <div class="row g-4 mb-5 align-items-stretch">
+            <div class="col-lg-7">
+                <div class="row g-3 h-100 align-content-start">
+                    <div class="col-sm-6">
+                        <div class="stat-card">
+                            <div class="text-muted small fw-bold">📦 เบอร์อะไหล่ทั้งหมด</div>
+                            <div class="stat-num text-dark">{{ total_items }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="stat-card">
+                            <div class="text-muted small fw-bold">🔢 จำนวนรวมในคลัง</div>
+                            <div class="stat-num text-primary">{{ total_stock }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="stat-card border-warning" style="background-color: #fffdf5;">
+                            <div class="text-muted small fw-bold text-warning">⚠️ รายการใกล้หมด (&lt;5)</div>
+                            <div class="stat-num text-warning">{{ low_stock_count }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="stat-card border-danger" style="background-color: #fff5f5;">
+                            <div class="text-muted small fw-bold text-danger">🚨 รายการที่หมดคลัง</div>
+                            <div class="stat-num text-danger">{{ out_of_stock_count }}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-card">
-                    <div class="text-muted small fw-bold">🔢 จำนวนรวมในคลัง</div>
-                    <div class="stat-num text-primary">{{ total_stock }}</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-card border-warning" style="background-color: #fffdf5;">
-                    <div class="text-muted small fw-bold text-warning">⚠️ รายการใกล้หมด (&lt;5)</div>
-                    <div class="stat-num text-warning">{{ low_stock_count }}</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-card border-danger" style="background-color: #fff5f5;">
-                    <div class="text-muted small fw-bold text-danger">🚨 รายการที่หมดคลัง</div>
-                    <div class="stat-num text-danger">{{ out_of_stock_count }}</div>
+            <div class="col-lg-5">
+                <div class="bg-white p-3 border rounded-4 shadow-sm h-100 d-flex flex-column align-items-center justify-content-center">
+                    <h6 class="fw-bold text-secondary mb-2 text-center">📊 สัดส่วนชิ้นส่วนอิเล็กทรอนิกส์ในคลัง</h6>
+                    <div style="width: 100%; max-width: 240px; position: relative;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -183,11 +192,10 @@
                 {% for product in products %}
                 <div class="col-md-4 col-sm-6">
                     <div class="product-card h-100 shadow-sm p-3">
-
                         {% if is_admin %}
                         <div class="admin-actions">
-                            <a href="/edit/{{ product.id }}" class="btn btn-warning btn-sm rounded-circle shadow" title="แก้ไข">✏️</a>
-                            <a href="/delete/{{ product.id }}" class="btn btn-danger btn-sm rounded-circle shadow" title="ลบ" onclick="return confirm('ต้องการลบชิ้นส่วนนี้?')">🗑️</a>
+                            <a href="/edit/{{ product.id }}" class="btn btn-warning btn-sm rounded-circle shadow">✏️</a>
+                            <a href="/delete/{{ product.id }}" class="btn btn-danger btn-sm rounded-circle shadow" onclick="return confirm('ต้องการลบชิ้นส่วนนี้?')">🗑️</a>
                         </div>
                         {% endif %}
 
@@ -198,7 +206,6 @@
                         <div class="card-body d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="badge bg-light text-primary border border-primary-subtle" id="prod-cat-{{ product.id }}">{{ product.category }}</span>
-
                                 {% if (product.stock or 0) >= 15 %}
                                     <span class="badge bg-success-subtle text-success rounded-pill">🟢 คลังแน่น: {{ product.stock or 0 }} ชิ้น</span>
                                 {% elif (product.stock or 0) > 0 %}
@@ -213,8 +220,7 @@
                             <div class="mb-3">
                                 {% set stock_pct = ((product.stock or 0) / 100 * 100) if (product.stock or 0) <= 100 else 100 %}
                                 <div class="progress">
-                                    <div class="progress-bar {% if (product.stock or 0) >= 15 %}bg-success{% elif (product.stock or 0) > 0 %}bg-warning{% else %}bg-danger{% endif %}"
-                                         role="progressbar" style="width: {{ stock_pct }}%"></div>
+                                    <div class="progress-bar {% if (product.stock or 0) >= 15 %}bg-success{% elif (product.stock or 0) > 0 %}bg-warning{% else %}bg-danger{% endif %}" role="progressbar" style="width: {{ stock_pct }}%"></div>
                                 </div>
                             </div>
 
@@ -276,11 +282,61 @@
                 </table>
             </div>
         </div>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // 🔊 [AUDIO SMART FEATURE] ฟังก์ชันสร้างเสียงบี๊บเลียนแบบการยิงปืนสแกนบาร์โค้ดในคลังสินค้า
+        function playBeepSound(type) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                if(type === 'success') {
+                    // เสียงติ๊ดสั้นแหลมสองครั้ง (ความสำเร็จสูง)
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // โน้ต A5
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.08);
+                } else {
+                    // เสียงติ๊ดยิงของใส่ตะกร้าปกติ
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(1200, audioCtx.currentTime); // เสียงแหลมแบบปืนยิงคลังสินค้า
+                    gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.05);
+                }
+            } catch(e) { console.log("เบราว์เซอร์บล็อกการเล่นเสียงเบื้องต้น"); }
+        }
+
+        // 🍩 [CHART SMART FEATURE] ระบบดึงข้อมูลสดทางตรงจากตรรกะหลังบ้านมาพล็อตเป็นกราฟโดนัท
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ chart_labels|tojson }},
+                datasets: [{
+                    data: {{ chart_data|tojson }},
+                    backgroundColor: ['#0ea5e9', '#059669', '#f59e0b', '#ef4444', '#8b5cf6'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { family: 'Sarabun', size: 11 } } }
+                }
+            }
+        });
+
         let cart = JSON.parse(localStorage.getItem('electrohub_cart')) || [];
         updateCartUI();
 
@@ -302,6 +358,7 @@
 
                 cart.push({ id: id, name: name, img: img, price: priceNum, maxStock: maxStock, qty: 1 });
             }
+            playBeepSound('click'); // 🔊 เล่นเสียงยิงบาร์โค้ด
             saveCartAndRefresh();
             new bootstrap.Offcanvas(document.getElementById('cartSidebar')).show();
         }
@@ -460,6 +517,7 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
+                    playBeepSound('success'); // 🔊 เล่นเสียงความสำเร็จแบบสแกนผ่านคู่
                     alert(data.message);
                     cart = [];
                     saveCartAndRefresh();
