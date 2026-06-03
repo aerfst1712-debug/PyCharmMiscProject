@@ -5,10 +5,11 @@ import io
 from datetime import datetime
 
 app = Flask(__name__)
+# แนะนำให้เปลี่ยนเป็นค่าสุ่มยาวๆ เมื่อนำขึ้นระบบจริงบน Render
 app.secret_key = 'electrohub_labs_super_secret_key_999'
 
 DATABASE = 'electronics.db'
-ADMIN_PASSWORD = '1234'
+ADMIN_PASSWORD = '1234'  # รหัสผ่านสำหรับเข้าสู่ระบบแอดมิน
 
 
 def get_db():
@@ -19,15 +20,41 @@ def get_db():
 
 def update_db_structure():
     conn = get_db()
-    try:
-        conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
-        pass
-    try:
-        conn.execute("ALTER TABLE components ADD COLUMN datasheet_url TEXT")
-    except sqlite3.OperationalError:
-        pass
+    # ตรวจสอบและสร้างตาราง components หากยังไม่มีในระบบ (ป้องกันแอปพังในการรันครั้งแรก)
+    conn.execute('''
+                 CREATE TABLE IF NOT EXISTS components
+                 (
+                     id
+                     INTEGER
+                     PRIMARY
+                     KEY
+                     AUTOINCREMENT,
+                     name
+                     TEXT
+                     NOT
+                     NULL,
+                     category
+                     TEXT,
+                     price
+                     INTEGER
+                     DEFAULT
+                     0, -- แก้ไขเป็น INTEGER เพื่อความแม่นยำในการคำนวณเงิน
+                     image_url
+                     TEXT,
+                     description
+                     TEXT,
+                     specs
+                     TEXT,
+                     stock
+                     INTEGER
+                     DEFAULT
+                     0,
+                     datasheet_url
+                     TEXT
+                 )
+                 ''')
 
+    # สร้างตารางประวัติกิจกรรมคลังพัสดุ
     conn.execute('''
                  CREATE TABLE IF NOT EXISTS stock_logs
                  (
@@ -52,17 +79,18 @@ def update_db_structure():
                  ''')
     conn.commit()
 
+    # ใส่ข้อมูลเริ่มต้นหากระบบยังเป็นคลังว่างเปล่า
     cursor = conn.execute('SELECT COUNT(*) FROM components')
     if cursor.fetchone()[0] == 0:
         default_components = [
-            ('IC LM358', 'Integrated Circuit', '50 บาท', 'https://th.rs-online.com/images/F4852924-01.jpg',
+            ('IC LM358', 'Integrated Circuit', 50, 'https://th.rs-online.com/images/F4852924-01.jpg',
              'ไอซีขยายสัญญาณ Low Power Dual Operational Amplifier นิยมใช้ในวงจรกรองสัญญาณและวงจรเปรียบเทียบแรงดัน',
-             'ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 3V ถึง 32V, จำนวนช่องสัญญาณ: 2 ช่อง', 100,
+             'ขาใช้งาน: 8 พิน\nแรงดันไฟเลี้ยง: 3V ถึง 32V\nจำนวนช่องสัญญาณ: 2 ช่อง', 100,
              'https://www.ti.com/lit/ds/symlink/lm358.pdf'),
-            ('Arduino Uno R3', 'Microcontroller', '250 บาท',
+            ('Arduino Uno R3', 'Microcontroller', 250,
              'https://docs.arduino.cc/static/29849b29d499ec249f056bc293d07ec5/A000066_featured.jpg',
              'บอร์ดไมโครคอนโทรลเลอร์โอเพนซอร์สยอดนิยมสำหรับเรียนรู้และพัฒนาระบบฝังตัว วงจรอิเล็กทรอนิกส์ และหุ่นยนต์',
-             'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา', 4,
+             'ชิปหลัก: ATmega328P\nแรงดันใช้งาน: 5V\nขา Digital I/O: 14 ขา\nขา Analog Input: 6 ขา', 4,
              'https://docs.arduino.cc/resources/datasheets/A000066-datasheet-pdf')
         ]
         conn.executemany('''
@@ -99,7 +127,7 @@ def home():
 
     products = [dict(row) for row in cursor.fetchall()]
 
-    # 📊 คำนวณสถิติเพื่อส่งไปแสดงผลบน Dashboard (แอดมินเห็นทั้งหมด ส่วนยูสเซอร์ทั่วไปช่วยลดความโล่งของเว็บ)
+    # สรุปข้อมูล Dashboard ด้านบนหน้าเว็บ
     total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0]
     total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
     total_stock = total_stock_res if total_stock_res is not None else 0
@@ -124,6 +152,25 @@ def home():
                            low_stock_count=low_stock_count,
                            out_of_stock_count=out_of_stock_count,
                            logs=logs)
+
+
+@app.route('/product/<int:product_id>')
+def product_detail(product_id):
+    conn = get_db()
+    row = conn.execute('SELECT * FROM components WHERE id = ?', (product_id,)).fetchone()
+    conn.close()
+
+    if not row:
+        return abort(404)
+
+    product = dict(row)
+    # แปลงข้อความ Specs แบบขึ้นบรรทัดใหม่ให้เป็น List เพื่อให้ Jinja2 นำไปลูปแสดงผลแยกบรรทัดได้ถูกต้อง
+    if product['specs']:
+        product['specs'] = product['specs'].splitlines()
+    else:
+        product['specs'] = []
+
+    return render_template('detail.html', product=product, is_admin=is_logged_in_admin())
 
 
 @app.route('/login', methods=['POST'])
@@ -171,10 +218,14 @@ def add_product():
     if request.method == 'POST':
         name = request.form['name']
         category = request.form['category']
-        price = request.form['price']
+        try:
+            price = int(request.form['price'])
+        except ValueError:
+            price = 0
+
         image_url = request.form['image_url']
         description = request.form['description']
-        specs = request.form['specs']
+        specs = request.form['specs']  # บันทึกแบบข้อความขึ้นบรรทัดใหม่ตรงๆ
 
         try:
             stock = int(request.form.get('stock', 0))
@@ -208,7 +259,11 @@ def edit_product(product_id):
     if request.method == 'POST':
         name = request.form['name']
         category = request.form['category']
-        price = request.form['price']
+        try:
+            price = int(request.form['price'])
+        except ValueError:
+            price = 0
+
         image_url = request.form['image_url']
         description = request.form['description']
         specs = request.form['specs']
@@ -305,7 +360,7 @@ def export_report():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID อุปกรณ์', 'ชื่ออะไหล่ชิ้นส่วน', 'หมวดหมู่', 'ราคาต่อชิ้น', 'คงเหลือในสต็อกจริง'])
+    writer.writerow(['ID อุปกรณ์', 'ชื่ออะไหล่ชิ้นส่วน', 'หมวดหมู่', 'ราคาต่อชิ้น (บาท)', 'คงเหลือในสต็อกจริง'])
 
     for row in rows:
         writer.writerow([row['id'], row['name'], row['category'], row['price'], row['stock']])
