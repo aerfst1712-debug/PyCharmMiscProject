@@ -5,18 +5,15 @@ import io
 from datetime import datetime
 
 app = Flask(__name__)
-# 🔑 ต้องตั้งรหัสลับ Secret Key เพื่อใช้เข้ารหัสระบบคุกกี้ Session ป้องกันการปลอมแปลงสิทธิ์
 app.secret_key = 'electrohub_labs_super_secret_key_999'
 
 DATABASE = 'electronics.db'
-ADMIN_PASSWORD = '1234'  # รหัสผ่านหลักของแอดมิน
-
+ADMIN_PASSWORD = '1234'
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
-
 
 def update_db_structure():
     conn = get_db()
@@ -30,55 +27,30 @@ def update_db_structure():
         pass
 
     conn.execute('''
-                 CREATE TABLE IF NOT EXISTS stock_logs
-                 (
-                     id
-                     INTEGER
-                     PRIMARY
-                     KEY
-                     AUTOINCREMENT,
-                     component_name
-                     TEXT
-                     NOT
-                     NULL,
-                     action_type
-                     TEXT
-                     NOT
-                     NULL,
-                     timestamp
-                     TEXT
-                     NOT
-                     NULL
-                 )
-                 ''')
+        CREATE TABLE IF NOT EXISTS stock_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            component_name TEXT NOT NULL,
+            action_type TEXT NOT NULL,
+            timestamp TEXT NOT NULL
+        )
+    ''')
     conn.commit()
 
     cursor = conn.execute('SELECT COUNT(*) FROM components')
     if cursor.fetchone()[0] == 0:
         default_components = [
-            ('IC LM358', 'Integrated Circuit', '50 บาท', 'https://th.rs-online.com/images/F4852924-01.jpg',
-             'ไอซีขยายสัญญาณ Low Power Dual Operational Amplifier นิยมใช้ในวงจรกรองสัญญาณและวงจรเปรียบเทียบแรงดัน',
-             'ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 3V ถึง 32V, จำนวนช่องสัญญาณ: 2 ช่อง', 100,
-             'https://www.ti.com/lit/ds/symlink/lm358.pdf'),
-            ('Arduino Uno R3', 'Microcontroller', '250 บาท',
-             'https://docs.arduino.cc/static/29849b29d499ec249f056bc293d07ec5/A000066_featured.jpg',
-             'บอร์ดไมโครคอนโทรลเลอร์โอเพนซอร์สยอดนิยมสำหรับเรียนรู้และพัฒนาระบบฝังตัว วงจรอิเล็กทรอนิกส์ และหุ่นยนต์',
-             'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา', 4,
-             'https://docs.arduino.cc/resources/datasheets/A000066-datasheet-pdf')
+            ('IC LM358', 'Integrated Circuit', '50 บาท', 'https://th.rs-online.com/images/F4852924-01.jpg', 'ไอซีขยายสัญญาณ Low Power Dual Operational Amplifier นิยมใช้ในวงจรกรองสัญญาณและวงจรเปรียบเทียบแรงดัน', 'ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 3V ถึง 32V, จำนวนช่องสัญญาณ: 2 ช่อง', 100, 'https://www.ti.com/lit/ds/symlink/lm358.pdf'),
+            ('Arduino Uno R3', 'Microcontroller', '250 บาท', 'https://docs.arduino.cc/static/29849b29d499ec249f056bc293d07ec5/A000066_featured.jpg', 'บอร์ดไมโครคอนโทรลเลอร์โอเพนซอร์สยอดนิยมสำหรับเรียนรู้และพัฒนาระบบฝังตัว วงจรอิเล็กทรอนิกส์ และหุ่นยนต์', 'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา', 4, 'https://docs.arduino.cc/resources/datasheets/A000066-datasheet-pdf')
         ]
         conn.executemany('''
-                         INSERT INTO components (name, category, price, image_url, description, specs, stock,
-                                                 datasheet_url)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                         ''', default_components)
+            INSERT INTO components (name, category, price, image_url, description, specs, stock, datasheet_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', default_components)
         conn.commit()
     conn.close()
 
-
-# 🔒 ฟังก์ชันเช็คสิทธิ์แอดมินผ่าน Session ชั่วคราวบนเว็บ
 def is_logged_in_admin():
     return session.get('is_admin') == True
-
 
 @app.route('/')
 def home():
@@ -101,21 +73,18 @@ def home():
 
     products = [dict(row) for row in cursor.fetchall()]
 
-    total_items = total_stock = low_stock_count = out_of_stock_count = 0
-    logs = []
+    # 📊 คำนวณสถิติเพื่อส่งไปแสดงผลบน Dashboard (แอดมินเห็นทั้งหมด ส่วนยูสเซอร์ทั่วไปช่วยลดความโล่งของเว็บ)
+    total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0]
+    total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
+    total_stock = total_stock_res if total_stock_res is not None else 0
+    low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0]
+    out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0]
 
-    if is_admin:
-        total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0]
-        total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
-        total_stock = total_stock_res if total_stock_res is not None else 0
-        low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0]
-        out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0]
-
-        try:
-            log_cursor = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 10')
-            logs = log_cursor.fetchall()
-        except sqlite3.OperationalError:
-            logs = []
+    try:
+        log_cursor = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 5')
+        logs = log_cursor.fetchall()
+    except sqlite3.OperationalError:
+        logs = []
 
     conn.close()
     return render_template('index.html',
@@ -130,21 +99,17 @@ def home():
                            out_of_stock_count=out_of_stock_count,
                            logs=logs)
 
-
-# 🔑 เส้นทางเข้าสู่ระบบและออกจากระบบผ่าน Session ฟอร์ม
 @app.route('/login', methods=['POST'])
 def login():
     password = request.form.get('password', '')
     if password == ADMIN_PASSWORD:
-        session['is_admin'] = True  # ฝังสถานะแอดมินเข้ารหัสลงในบราวเซอร์สำเร็จ
+        session['is_admin'] = True
     return redirect(url_for('home'))
-
 
 @app.route('/logout')
 def logout():
-    session.pop('is_admin', None)  # ล้างสถานะสิทธิ์แอดมินออกทันทีเมื่อกดออกจากระบบ
+    session.pop('is_admin', None)
     return redirect(url_for('home'))
-
 
 @app.route('/update_stock/<int:product_id>/<string:action>')
 def update_stock(product_id, action):
@@ -169,20 +134,6 @@ def update_stock(product_id, action):
     conn.close()
     return redirect(url_for('home'))
 
-
-@app.route('/product/<int:product_id>')
-def product_detail(product_id):
-    conn = get_db()
-    product = conn.execute('SELECT * FROM components WHERE id = ?', (product_id,)).fetchone()
-    conn.close()
-
-    if product is None: abort(404)
-
-    product_dict = dict(product)
-    product_dict['specs'] = [s.strip() for s in product_dict['specs'].split(',')] if product_dict['specs'] else []
-    return render_template('product.html', product=product_dict, is_admin=is_logged_in_admin())
-
-
 @app.route('/add', methods=['GET', 'POST'])
 def add_product():
     if not is_logged_in_admin(): return abort(403)
@@ -195,7 +146,6 @@ def add_product():
         description = request.form['description']
         specs = request.form['specs']
 
-        # 🧪 Form Validation หลังบ้าน: ดักจับข้อมูลสต็อกและสเปกก่อนเซฟเข้า Database
         try:
             stock = int(request.form.get('stock', 0))
             if stock < 0: stock = 0
@@ -206,9 +156,9 @@ def add_product():
 
         conn = get_db()
         conn.execute('''
-                     INSERT INTO components (name, category, price, image_url, description, specs, stock, datasheet_url)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                     ''', (name, category, price, image_url, description, specs, stock, datasheet_url))
+            INSERT INTO components (name, category, price, image_url, description, specs, stock, datasheet_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (name, category, price, image_url, description, specs, stock, datasheet_url))
 
         now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
@@ -218,7 +168,6 @@ def add_product():
         return redirect(url_for('home'))
 
     return render_template('add.html', is_admin=True)
-
 
 @app.route('/edit/<int:product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
@@ -242,17 +191,10 @@ def edit_product(product_id):
         datasheet_url = request.form.get('datasheet_url', '')
 
         conn.execute('''
-                     UPDATE components
-                     SET name=?,
-                         category=?,
-                         price=?,
-                         image_url=?,
-                         description=?,
-                         specs=?,
-                         stock=?,
-                         datasheet_url=?
-                     WHERE id = ?
-                     ''', (name, category, price, image_url, description, specs, stock, datasheet_url, product_id))
+            UPDATE components 
+            SET name=?, category=?, price=?, image_url=?, description=?, specs=?, stock=?, datasheet_url=?
+            WHERE id=?
+        ''', (name, category, price, image_url, description, specs, stock, datasheet_url, product_id))
 
         now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
@@ -264,7 +206,6 @@ def edit_product(product_id):
     product = conn.execute('SELECT * FROM components WHERE id = ?', (product_id,)).fetchone()
     conn.close()
     return render_template('edit.html', product=product, is_admin=True)
-
 
 @app.route('/delete/<int:product_id>')
 def delete_product(product_id):
@@ -280,7 +221,6 @@ def delete_product(product_id):
     conn.commit()
     conn.close()
     return redirect(url_for('home'))
-
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
@@ -300,8 +240,7 @@ def checkout():
 
             current_stock = db_item['stock'] or 0
             if current_stock < qty:
-                return jsonify({'success': False,
-                                'message': f'สินค้า {db_item["name"]} เหลือไม่เพียงพอ (เหลือ {current_stock} ชิ้น)'}), 400
+                return jsonify({'success': False, 'message': f'สินค้า {db_item["name"]} เหลือไม่เพียงพอ (เหลือ {current_stock} ชิ้น)'}), 400
 
             conn.execute('UPDATE components SET stock = stock - ? WHERE id = ?', (qty, product_id))
             conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
@@ -313,8 +252,6 @@ def checkout():
         conn.close()
         return jsonify({'success': False, 'message': str(e)}), 500
 
-
-# 📊 💾 เส้นทางใหม่: แปลงฐานข้อมูล SQLite เป็นไฟล์รายงานสรุป .CSV สำหรับเปิดใน Excel
 @app.route('/export_report')
 def export_report():
     if not is_logged_in_admin(): return abort(403)
@@ -324,51 +261,20 @@ def export_report():
     rows = cursor.fetchall()
     conn.close()
 
-    # สร้างบัฟเฟอร์หน่วยความจำชั่วคราวในการเขียนตารางข้อมูลเพื่อส่งออกไฟล์
     output = io.StringIO()
     writer = csv.writer(output)
-
-    # เขียนหัวคอลัมน์ของตารางข้อมูลรายงาน (รองรับภาษาไทย)
     writer.writerow(['ID อุปกรณ์', 'ชื่ออะไหล่ชิ้นส่วน', 'หมวดหมู่', 'ราคาต่อชิ้น', 'คงเหลือในสต็อกจริง'])
 
     for row in rows:
         writer.writerow([row['id'], row['name'], row['category'], row['price'], row['stock']])
 
-    # เข้ารหัสให้ไฟล์มี BOM (Byte Order Mark) ของ UTF-8 เพื่อบังคับให้ Excel อ่านอักษรภาษาไทยได้ถูกต้อง ไม่เพี้ยนเป็นต่างดาว
     csv_data = "\ufeff" + output.getvalue()
-
     now_date = datetime.now().strftime('%Y%m%d')
     return Response(
         csv_data,
         mimetype="text/csv",
         headers={"Content-disposition": f"attachment; filename=ElectroHub_StockReport_{now_date}.csv"}
     )
-
-
-@app.route('/reset_db')
-def reset_db():
-    conn = get_db()
-    conn.execute('DROP TABLE IF EXISTS components')
-    conn.execute('DROP TABLE IF EXISTS stock_logs')
-    conn.execute('''
-                 CREATE TABLE components
-                 (
-                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                     name          TEXT NOT NULL,
-                     category      TEXT NOT NULL,
-                     price         TEXT NOT NULL,
-                     image_url     TEXT NOT NULL,
-                     description   TEXT NOT NULL,
-                     specs         TEXT NOT NULL,
-                     stock         INTEGER DEFAULT 0,
-                     datasheet_url TEXT
-                 )
-                 ''')
-    conn.commit()
-    conn.close()
-    update_db_structure()
-    return "รีเซ็ตคลังฐานข้อมูลเริ่มต้นสำเร็จแล้ว!"
-
 
 if __name__ == '__main__':
     update_db_structure()
