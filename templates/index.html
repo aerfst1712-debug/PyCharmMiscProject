@@ -15,23 +15,37 @@
         .card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; position: relative; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .price-tag { color: #059669; font-weight: bold; font-size: 1.1rem; }
-        .btn-view { background-color: #0ea5e9; color: #ffffff; border-radius: 20px; font-weight: bold; border: none; }
-        .btn-view:hover { background-color: #0284c7; color: #ffffff; }
+        .btn-view { background-color: #f1f5f9; color: #0284c7; border-radius: 20px; font-weight: bold; border: 1px solid #e2e8f0; }
+        .btn-view:hover { background-color: #e2e8f0; }
+        .btn-buy-now { background-color: #0ea5e9; color: #ffffff; border-radius: 20px; font-weight: bold; border: none; }
+        .btn-buy-now:hover { background-color: #0284c7; }
         .admin-actions { position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px; }
         .indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
         .bg-success-dot { background-color: #10b981; }
         .bg-warning-dot { background-color: #f59e0b; }
         .bg-danger-dot { background-color: #ef4444; }
         .log-box { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; }
+
+        /* 🛒 สไตล์ตะกร้าสินค้าแบบสไลด์ข้าง (Cart Offcanvas) */
+        .cart-badge { background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; position: absolute; top: -5px; right: -5px; }
+        .cart-sidebar { width: 380px !important; }
+        .cart-item-img { width: 50px; height: 50px; object-fit: contain; background-color: #f8fafc; border-radius: 6px; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-light p-3 shadow-sm">
+    <!-- แถบเมนูด้านบน (Navbar) -->
+    <nav class="navbar navbar-light p-3 shadow-sm sticky-top">
         <div class="container">
             <a class="navbar-brand fw-bold fs-3" href="/{% if is_admin %}?pw={{ pw }}&admin=true{% endif %}">⚡ ElectroHub <span style="color: #0ea5e9;">Labs</span></a>
             <div class="d-flex align-items-center gap-3">
 
+                <!-- 🛒 ปุ่มเปิดตะกร้าสินค้าสำหรับลูกค้า (ทุกคนเห็น) -->
+                <button class="btn btn-outline-dark rounded-pill position-relative px-3 fw-bold btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartSidebar">
+                    🛒 ตะกร้าของฉัน <span id="cartCountBadge" class="cart-badge d-none">0</span>
+                </button>
+
+                <!-- ฟอร์มแอดมินลับ -->
                 {% if show_login_box or is_admin %}
                 <form method="GET" action="/" class="d-flex gap-1 align-items-center">
                     <input type="hidden" name="admin" value="true">
@@ -47,8 +61,32 @@
         </div>
     </nav>
 
+    <!-- 🛒 Sidebar แสดงตะกร้าสินค้าด้านข้าง (Offcanvas) -->
+    <div class="offcanvas offcanvas-end cart-sidebar" tabindex="-1" id="cartSidebar">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title fw-bold">🛒 ตะกร้าสินค้าของคุณ</h5>
+            <button type="button" class="btn-close" data-bs-canvas="offcanvas" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column">
+            <div id="cartItemsList" class="flex-grow-1 overflow-auto">
+                <!-- รายการในตะกร้าสินค้าจะมาแทรกตรงนี้จาก JS -->
+                <p class="text-muted text-center my-5">ไม่มีสินค้าในตะกร้าขณะนี้</p>
+            </div>
+            <div class="border-top pt-3 mt-auto">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="fw-bold">ยอดเงินรวม:</span>
+                    <span id="cartTotalPrice" class="fw-bold text-success fs-5">0 บาท</span>
+                </div>
+                <button id="checkoutBtn" class="btn btn-primary w-100 rounded-pill fw-bold py-2.5 d-none" onclick="processCheckout()">
+                    💳 ยืนยันคำสั่งซื้อ (และตัดสต็อก)
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="container my-5">
 
+        <!-- 📊 [ADMIN ONLY] สถิติจำนวนสินค้า -->
         {% if is_admin %}
         <div class="row g-3 mb-5">
             <div class="col-md-3 col-6">
@@ -78,6 +116,7 @@
         </div>
         {% endif %}
 
+        <!-- ส่วนสืบค้นข้อมูล -->
         <div class="text-center mb-5">
             <h1 class="fw-bold mb-2">📦 คลังข้อมูลส่วนประกอบอิเล็กทรอนิกส์</h1>
             <p class="text-muted">สืบค้นสเปก รายละเอียดชิ้นส่วน และข้อมูลทางเทคนิคได้อย่างรวดเร็ว</p>
@@ -89,6 +128,7 @@
             </form>
         </div>
 
+        <!-- ปุ่มตัวกรองหมวดหมู่สินค้าด่วน -->
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
             <a href="/{% if is_admin %}?pw={{ pw }}&admin=true{% endif %}" class="btn rounded-pill px-3 fw-bold btn-sm {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ทั้งหมด</a>
             {% for cat in categories %}
@@ -96,12 +136,14 @@
             {% endfor %}
         </div>
 
+        <!-- การ์ดรายการสินค้า -->
         <div class="row g-4 mb-5">
             {% if products %}
                 {% for product in products %}
                 <div class="col-md-4 col-sm-6">
                     <div class="card h-100 shadow-sm p-2">
 
+                        <!-- 🛠️ [ADMIN ONLY] ปุ่มแก้ไขและลบสินค้า -->
                         {% if is_admin %}
                         <div class="admin-actions">
                             <a href="/edit/{{ product.id }}?pw={{ pw }}" class="btn btn-warning btn-sm rounded-circle shadow" title="แก้ไข">✏️</a>
@@ -109,7 +151,7 @@
                         </div>
                         {% endif %}
 
-                        <img src="{{ product.image_url }}" class="card-img-top rounded p-2" alt="{{ product.name }}" style="height: 180px; object-fit: contain; background: #f8fafc;">
+                        <img src="{{ product.image_url }}" class="card-img-top rounded p-2" id="prod-img-{{ product.id }}" alt="{{ product.name }}" style="height: 180px; object-fit: contain; background: #f8fafc;">
                         <div class="card-body d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="badge bg-light text-primary border border-primary-subtle">{{ product.category }}</span>
@@ -123,9 +165,10 @@
                                     {% endif %}
                                 </span>
                             </div>
-                            <h4 class="card-title mb-2 text-dark">{{ product.name }}</h4>
+                            <h4 class="card-title mb-2 text-dark" id="prod-name-{{ product.id }}">{{ product.name }}</h4>
                             <p class="card-text text-muted text-truncate mb-3">{{ product.description }}</p>
 
+                            <!-- 🛠️ [ADMIN ONLY] ปุ่มปรับเพิ่มลดจำนวนสต็อก -->
                             {% if is_admin %}
                             <div class="d-flex gap-1 align-items-center mb-3 justify-content-center border-top border-bottom py-2">
                                 <span class="small text-muted me-2">ปรับคลัง:</span>
@@ -135,9 +178,21 @@
                             </div>
                             {% endif %}
 
-                            <div class="d-flex justify-content-between align-items-center mt-auto">
-                                <span class="price-tag">ราคา: {{ product.price }}</span>
-                                <a href="/product/{{ product.id }}{% if is_admin %}?pw={{ pw }}{% endif %}" class="btn btn-view btn-sm px-4">ดูรายละเอียด</a>
+                            <div class="d-flex justify-content-between align-items-center mt-auto bg-transparent">
+                                <span class="price-tag" id="prod-price-{{ product.id }}">ราคา: {{ product.price }}</span>
+                            </div>
+                            <div class="row g-2 mt-2 bg-transparent">
+                                <div class="col-5 bg-transparent">
+                                    <a href="/product/{{ product.id }}{% if is_admin %}?pw={{ pw }}{% endif %}" class="btn btn-view btn-sm w-100 py-2">รายละเอียด</a>
+                                </div>
+                                <div class="col-7 bg-transparent">
+                                    <!-- 🛒 ปุ่มเพิ่มเข้าตะกร้า (ถ้าสต็อกหมด ปุ่มจะกลายเป็นสีเทาและกดใช้งานไม่ได้) -->
+                                    {% if (product.stock or 0) > 0 %}
+                                        <button class="btn btn-buy-now btn-sm w-100 py-2" onclick="addToCart('{{ product.id }}', '{{ product.stock }}')">🛒 ใส่ตะกร้า</button>
+                                    {% else %}
+                                        <button class="btn btn-secondary btn-sm w-100 py-2" disabled>❌ สินค้าหมด</button>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -150,6 +205,7 @@
             {% endif %}
         </div>
 
+        <!-- 📋 [ADMIN ONLY] บันทึกประวัติ Logs -->
         {% if is_admin %}
         <div class="log-box shadow-sm">
             <h5 class="fw-bold mb-3 text-secondary">📋 บันทึกประวัติการจัดการคลังล่าสุด (Admin Stock Logs)</h5>
@@ -183,5 +239,180 @@
         {% endif %}
 
     </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- 🛒 JavaScript สำหรับจัดการตะกร้าสินค้าแบบ Client-side และส่งเช็คเอาท์ไปหักหลังบ้าน -->
+    <script>
+        // โหลดข้อมูลตะกร้าที่เคยเลือกไว้เดิม (ถ้ามี)
+        let cart = JSON.parse(localStorage.getItem('electrohub_cart')) || [];
+        updateCartUI();
+
+        // 1. ฟังก์ชันเพิ่มสินค้าลงตะกร้าพร้อมจำกัดการซื้อตามสต็อกที่มีจริง
+        function addToCart(id, maxStock) {
+            maxStock = parseInt(maxStock);
+            let productInCart = cart.find(item => item.id === id);
+
+            if (productInCart) {
+                // ถ้าในตะกร้ามีสินค้านี้อยู่แล้ว และจะกดซื้อเพิ่ม
+                if (productInCart.qty >= maxStock) {
+                    alert(`ขออภัย! ไม่สามารถใส่เพิ่มได้แล้ว เนื่องจากคุณสั่งซื้อครบจำนวนสินค้าในคลังที่มีสูงสุดแล้ว (${maxStock} ชิ้น)`);
+                    return;
+                }
+                productInCart.qty += 1;
+            } else {
+                // ถ้ายังไม่มีชิ้นนี้ในตะกร้า ให้ดึงข้อมูลมาสร้าง Item ใหม่
+                let name = document.getElementById(`prod-name-${id}`).innerText;
+                let img = document.getElementById(`prod-img-${id}`).src;
+                let priceText = document.getElementById(`prod-price-${id}`).innerText;
+                // ดึงตัวเลขจากคำว่า "ราคา: 50 บาท"
+                let priceNum = parseInt(priceText.replace(/[^0-9]/g, '')) || 0;
+
+                cart.push({
+                    id: id,
+                    name: name,
+                    img: img,
+                    price: priceNum,
+                    maxStock: maxStock,
+                    qty: 1
+                });
+            }
+
+            saveCartAndRefresh();
+
+            // เปิดแถบ Sidebar ตะกร้าสินค้าด้านข้างให้ดูทันทีเพื่อความสะดวก
+            var offcanvasElement = document.getElementById('cartSidebar');
+            var offcanvas = new bootstrap.Offcanvas(offcanvasElement);
+            offcanvas.show();
+        }
+
+        // 2. ลบสินค้าออกจากตะกร้า
+        function removeFromCart(id) {
+            cart = cart.filter(item => item.id !== id);
+            saveCartAndRefresh();
+        }
+
+        // 3. ปรับเปลี่ยนจำนวนชิ้นในหน้าตะกร้าโดยตรง
+        function changeQty(id, action) {
+            let item = cart.find(i => i.id === id);
+            if (item) {
+                if (action === 'increase') {
+                    if (item.qty >= item.maxStock) {
+                        alert(`ไม่สามารถเพิ่มได้เกิน ${item.maxStock} ชิ้น ซึ่งเป็นยอดสูงสุดที่คลังออนไลน์มี`);
+                        return;
+                    }
+                    item.qty += 1;
+                } else if (action === 'decrease') {
+                    item.qty -= 1;
+                    if (item.qty <= 0) {
+                        removeFromCart(id);
+                        return;
+                    }
+                }
+                saveCartAndRefresh();
+            }
+        }
+
+        // 4. บันทึกค่าลงหน่วยความจำชั่วคราวและอัปเดตหน้าตาเว็บ
+        function saveCartAndRefresh() {
+            localStorage.setItem('electrohub_cart', JSON.stringify(cart));
+            updateCartUI();
+        }
+
+        // 5. วาดหน้ารายการสินค้าในตะกร้าใหม่ทุกครั้งที่มีการกดซื้อ
+        function updateCartUI() {
+            let listContainer = document.getElementById('cartItemsList');
+            let badge = document.getElementById('cartCountBadge');
+            let checkoutBtn = document.getElementById('checkoutBtn');
+            let totalLabel = document.getElementById('cartTotalPrice');
+
+            let totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+            let totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+            // อัปเดตตัวเลขแจ้งเตือนจำนวนสินค้าบน Navbar
+            if (totalQty > 0) {
+                badge.innerText = totalQty;
+                badge.classList.remove('d-none');
+                checkoutBtn.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
+                checkoutBtn.classList.add('d-none');
+            }
+
+            totalLabel.innerText = totalPrice + ' บาท';
+
+            if (cart.length === 0) {
+                listContainer.innerHTML = '<p class="text-muted text-center my-5">ไม่มีสินค้าในตะกร้าขณะนี้</p>';
+                return;
+            }
+
+            let html = '';
+            cart.forEach(item => {
+                html += `
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-3 border-bottom bg-transparent">
+                        <img src="${item.img}" class="cart-item-img me-2">
+                        <div class="flex-grow-1 bg-transparent">
+                            <h6 class="mb-0 fw-bold text-dark small">${item.name}</h6>
+                            <small class="text-muted">${item.price} บาท/ชิ้น</small>
+                            <div class="d-flex align-items-center gap-1 mt-1 bg-transparent">
+                                <button class="btn btn-outline-secondary btn-xs py-0 px-2 rounded" onclick="changeQty('${item.id}', 'decrease')">-</button>
+                                <span class="px-2 small fw-bold">${item.qty}</span>
+                                <button class="btn btn-outline-secondary btn-xs py-0 px-2 rounded" onclick="changeQty('${item.id}', 'increase')">+</button>
+                            </div>
+                        </div>
+                        <div class="text-end bg-transparent">
+                            <div class="fw-bold text-success small">${item.price * item.qty} บาท</div>
+                            <button class="btn btn-link btn-sm text-danger p-0 mt-1" onclick="removeFromCart('${item.id}')">ลบ</button>
+                        </div>
+                    </div>
+                `;
+            });
+            listContainer.innerHTML = html;
+        }
+
+        // 6. ฟังก์ชันส่งค่าตะกร้าไปยังเซิร์ฟเวอร์หลังบ้านเพื่อตัดสต็อกจริงในคลังออนไลน์
+        function processCheckout() {
+            if (cart.length === 0) return;
+
+            if (!confirm('ยืนยันคำสั่งซื้อเพื่อเบิกอะไหล่ออกจากสต็อกออนไลน์?')) return;
+
+            document.getElementById('checkoutBtn').disabled = true;
+            document.getElementById('checkoutBtn').innerText = 'กำลังประมวลผลสต็อก...';
+
+            fetch('/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ cart: cart })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    // สั่งเคลียร์ตะกร้าสินค้าเมื่อกดซื้อสำเร็จ
+                    cart = [];
+                    saveCartAndRefresh();
+
+                    // ปิด Sidebar ตะกร้า และรีโหลดหน้าเพื่ออัปเดตสถิติคลังออนไลน์ใหม่
+                    var offcanvasElement = document.getElementById('cartSidebar');
+                    var offcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
+                    if (offcanvas) offcanvas.hide();
+
+                    location.reload();
+                } else {
+                    alert('ไม่สามารถทำการสั่งซื้อได้: ' + data.message);
+                    document.getElementById('checkoutBtn').disabled = false;
+                    document.getElementById('checkoutBtn').innerText = '💳 ยืนยันคำสั่งซื้อ (และตัดสต็อก)';
+                }
+            })
+            .catch(err => {
+                alert('เกิดข้อผิดพลาดในการเช็คเอาท์สต็อก: ' + err);
+                document.getElementById('checkoutBtn').disabled = false;
+                document.getElementById('checkoutBtn').innerText = '💳 ยืนยันคำสั่งซื้อ (และตัดสต็อก)';
+            });
+        }
+    </script>
 </body>
 </html>

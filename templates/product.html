@@ -18,7 +18,7 @@
 
     <div class="container my-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <a href="/{% if is_admin %}?pw={{ pw }}{% endif %}" class="btn btn-outline-secondary btn-sm rounded-pill">⬅ กลับหน้าหลัก</a>
+            <a href="/{% if is_admin %}?pw={{ pw }}&admin=true{% endif %}" class="btn btn-outline-secondary btn-sm rounded-pill">⬅ กลับหน้าหลัก</a>
             {% if is_admin %}
             <div class="d-flex gap-2">
                 <a href="/edit/{{ product.id }}?pw={{ pw }}" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold">✏️ แก้ไขข้อมูล</a>
@@ -30,12 +30,24 @@
         <div class="main-box p-4 p-md-5 shadow-sm">
             <div class="row g-5">
                 <div class="col-md-5">
-                    <div class="text-center mb-3 p-3 border rounded bg-light">
-                        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 280px; object-fit: contain;">
+                    <div class="text-center mb-4 p-3 border rounded bg-light">
+                        <img src="{{ product.image_url }}" alt="{{ product.name }}" id="prodDetailImg" class="img-fluid rounded" style="max-height: 280px; object-fit: contain;">
                     </div>
+
                     {% if product.datasheet_url %}
-                        <a href="{{ product.datasheet_url }}" target="_blank" class="btn btn-primary w-100 fw-bold py-2 rounded-pill" style="background-color: #0ea5e9; border: none;">📄 เปิดไฟล์ Datasheet (PDF)</a>
+                        <a href="{{ product.datasheet_url }}" target="_blank" class="btn btn-primary w-100 fw-bold py-2.5 rounded-pill mb-3" style="background-color: #0ea5e9; border: none;">📄 เปิดไฟล์ Datasheet (PDF)</a>
                     {% endif %}
+
+                    <!-- 🛒 ปุ่มใส่ตะกร้าจากหน้ารายละเอียด -->
+                    <div class="bg-transparent">
+                        {% if (product.stock or 0) > 0 %}
+                            <button class="btn btn-success w-100 fw-bold py-2.5 rounded-pill shadow-sm" onclick="addDetailToCart('{{ product.id }}', '{{ product.name }}', '{{ product.price }}', '{{ product.stock }}')">
+                                🛒 หยิบใส่ตะกร้าชิ้นนี้
+                            </button>
+                        {% else %}
+                            <button class="btn btn-secondary w-100 fw-bold py-2.5 rounded-pill" disabled>❌ สินค้าหมดสต็อก</button>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <div class="col-md-7">
@@ -43,14 +55,14 @@
                     <h1 class="fw-bold text-dark display-5 mb-2">{{ product.name }}</h1>
 
                     <div class="d-flex gap-3 my-3 align-items-center">
-                        <h4 class="text-success fw-bold m-0">ราคา: {{ product.price }}</h4>
+                        <h4 class="text-success fw-bold m-0" id="detailPriceLabel">ราคา: {{ product.price }}</h4>
                         <div class="stock-box p-2 px-3 rounded">📦 จำนวนในคลังเหลือ: {{ product.stock or 0 }} ชิ้น</div>
                     </div>
                     <hr>
                     <h5 class="fw-bold text-primary mt-4" style="color: #0ea5e9 !important;">📌 รายละเอียดการทำงาน:</h5>
                     <p class="fs-6 lh-lg text-secondary">{{ product.description }}</p>
 
-                    <h5 class="fw-bold text-primary mt-4 mb-3" style="color: #0ea5e9 !important;">🛠️ ข้อมูลสเปคทางเทคนิค:</h5>
+                    <h5 class="fw-bold text-primary mt-4 mb-3" style="color: #0ea5e9 !important;">🛠️ ข้อมูลสเปกทางเทคนิค:</h5>
                     <div class="row g-2">
                         {% if product.specs %}
                             {% for spec in product.specs %}
@@ -63,5 +75,39 @@
         </div>
     </div>
 
+    <!-- 🛒 JavaScript สำหรับฟังก์ชันหยิบใส่ตะกร้าหน้าแสดงผลรายละเอียด -->
+    <script>
+        function addDetailToCart(id, name, priceText, maxStock) {
+            maxStock = parseInt(maxStock);
+            let cart = JSON.parse(localStorage.getItem('electrohub_cart')) || [];
+            let productInCart = cart.find(item => item.id === id);
+
+            if (productInCart) {
+                if (productInCart.qty >= maxStock) {
+                    alert(`ขออภัย! ไม่สามารถใส่เพิ่มได้แล้ว เนื่องจากคุณสั่งซื้อครบจำนวนสินค้าในคลังสูงสุดแล้ว (${maxStock} ชิ้น)`);
+                    return;
+                }
+                productInCart.qty += 1;
+            } else {
+                let img = document.getElementById('prodDetailImg').src;
+                let priceNum = parseInt(priceText.replace(/[^0-9]/g, '')) || 0;
+
+                cart.push({
+                    id: id,
+                    name: name,
+                    img: img,
+                    price: priceNum,
+                    maxStock: maxStock,
+                    qty: 1
+                });
+            }
+
+            localStorage.setItem('electrohub_cart', JSON.stringify(cart));
+            alert('เพิ่มสินค้าลงตะกร้าของคุณเรียบร้อยแล้ว!');
+
+            // กลับไปหน้าแรกเพื่อดูสินค้าอื่นหรือตรวจเช็คเอาท์ตะกร้า
+            window.location.href = "/{% if is_admin %}?pw={{ pw }}&admin=true{% endif %}";
+        }
+    </script>
 </body>
 </html>

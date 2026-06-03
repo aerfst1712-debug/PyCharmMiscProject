@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, abort
+from flask import Flask, render_template, request, redirect, url_for, abort, jsonify
 import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
 DATABASE = 'electronics.db'
-ADMIN_PASSWORD = '1234'  # 🔑 รหัสผ่านแอดมิน
+ADMIN_PASSWORD = '1234'  # 🔑 รหัสผ่านแอดมินสำหรับคุมระบบ
 
 
 def get_db():
@@ -73,9 +73,7 @@ def update_db_structure():
 
 @app.route('/')
 def home():
-    # 📌 เช็กว่ามีการพิมพ์ต่อท้ายด้วย ?admin=true หรือไม่
     show_login_box = (request.args.get('admin', '').lower() == 'true')
-
     password_input = request.args.get('pw', '')
     is_admin = (password_input == ADMIN_PASSWORD)
 
@@ -111,7 +109,7 @@ def home():
         out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0]
 
         try:
-            log_cursor = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 5')
+            log_cursor = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 10')
             logs = log_cursor.fetchall()
         except sqlite3.OperationalError:
             logs = []
@@ -130,7 +128,7 @@ def home():
                            out_of_stock_count=out_of_stock_count,
                            pw=password_input,
                            logs=logs,
-                           show_login_box=show_login_box)  # ส่งสถานะการซ่อน/แสดงกล่องล็อกอินไปที่ HTML
+                           show_login_box=show_login_box)
 
 
 @app.route('/update_stock/<int:product_id>/<string:action>')
@@ -157,7 +155,7 @@ def update_stock(product_id, action):
 
         conn.commit()
     conn.close()
-    return redirect(url_for('home', pw=password_input, admin='true' if password_input == ADMIN_PASSWORD else 'false'))
+    return redirect(url_for('home', pw=password_input, admin='true'))
 
 
 @app.route('/product/<int:product_id>')
@@ -271,6 +269,48 @@ def delete_product(product_id):
     conn.commit()
     conn.close()
     return redirect(url_for('home', pw=password_input, admin='true'))
+
+
+# 🛒 เส้นทางใหม่: รับการกดยืนยันสั่งซื้อจากลูกค้าทางหน้าบ้าน เพื่อมาตัดสต็อกจริงในระบบหลังบ้าน
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    data = request.json
+    cart_items = data.get('cart', [])
+
+    if not cart_items:
+        return jsonify({'success': False, 'message': 'ไม่มีสินค้าในตะกร้า'}), 400
+
+    conn = get_db()
+    now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
+    try:
+        for item in cart_items:
+            product_id = item.get('id')
+            qty = int(item.get('qty', 1))
+
+            # ตรวจเช็คจำนวนสต็อกปัจจุบันในระบบหลังบ้านก่อน
+            db_item = conn.execute('SELECT name, stock FROM components WHERE id = ?', (product_id,)).fetchone()
+            if not db_item:
+                return jsonify({'success': False, 'message': f'ไม่พบสินค้า ID {product_id}'}), 400
+
+            current_stock = db_item['stock'] or 0
+            if current_stock < qty:
+                return jsonify({'success': False,
+                                'message': f'สินค้า {db_item["name"]} ในคลังมีไม่เพียงพอ (เหลือ {current_stock} ชิ้น)'}), 400
+
+            # หักยอดสต็อกสินค้าในตารางคลังอะไหล่
+            conn.execute('UPDATE components SET stock = stock - ? WHERE id = ?', (qty, product_id))
+
+            # บันทึกประวัติลงตารางกิจกรรมของแอดมิน (Logs)
+            conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
+                         (db_item['name'], f'🛒 ลูกค้าสั่งซื้อตัดสต็อกไปจำนวน {qty} ชิ้น', now_str))
+
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'สั่งซื้อเสร็จสมบูรณ์ ระบบหักสต็อกเรียบร้อยแล้ว!'})
+    except Exception as e:
+        conn.close()
+        return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'}), 500
 
 
 @app.route('/reset_db')
