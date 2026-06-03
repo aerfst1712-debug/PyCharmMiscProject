@@ -11,7 +11,6 @@
         h1, h2, h3, .navbar-brand, .stat-num, .hero-title { font-family: 'Chakra Petch', sans-serif; }
         .navbar { background-color: #ffffff !important; border-bottom: 2px solid #0ea5e9; }
 
-        /* 🌟 แต่งหน้าเว็บบริเวณบนสุดให้มีสีสันสวยเฉี่ยว ดุดัน ไม่โล่ง */
         .hero-banner { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border-radius: 24px; position: relative; overflow: hidden; }
         .hero-banner::before { content: ''; position: absolute; top: -50%; right: -20%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(14,165,233,0.15) 0%, transparent 70%); }
 
@@ -30,7 +29,6 @@
 </head>
 <body>
 
-    <!-- Toast Component สำหรับยกระดับการแจ้งเตือนแทนคำสั่ง Alert -->
     <div class="toast-container">
         <div id="liveToast" class="toast align-items-center text-white bg-dark border-0 rounded-pill p-1" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
@@ -62,7 +60,6 @@
         </div>
     </nav>
 
-    <!-- Sidebar ตะกร้าพัสดุ -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="cartSidebar" style="width: 380px;">
         <div class="offcanvas-header border-bottom">
             <h5 class="offcanvas-title fw-bold">🛒 รายการเตรียมเบิกชิ้นส่วน</h5>
@@ -88,7 +85,6 @@
     </div>
 
     <div class="container my-4">
-        <!-- 🌟 Hero Section โฉมใหม่ ลบความจืดชืดและลดความโล่งของเว็บไซต์ -->
         <div class="hero-banner p-4 p-md-5 mb-5 shadow">
             <div class="row align-items-center">
                 <div class="col-md-7">
@@ -105,7 +101,7 @@
             </div>
         </div>
 
-        <!-- Dashboard สรุปผลคลังสินค้า รวมถึงฟีเจอร์คำนวณราคามูลค่าสินทรัพย์รวม -->
+        {% if is_admin %}
         <div class="row g-3 mb-5">
             <div class="col-md-2 col-6">
                 <div class="stat-card">
@@ -138,8 +134,8 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
-        <!-- 🌟 ฟีเจอร์: แดชบอร์ดพิเศษเครื่องมือของกลุ่มแอดมินสำหรับดาวน์โหลด/อัปโหลดไฟล์สำรองข้อมูล CSV -->
         {% if is_admin %}
         <div class="card p-3 mb-5 bg-light border-0 rounded-4 shadow-sm">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -165,7 +161,6 @@
             {% endfor %}
         </div>
 
-        <!-- แสดงผลรายการการ์ดพัสดุ -->
         <div class="row g-4 mb-5">
             {% if products %}
                 {% for product in products %}
@@ -231,8 +226,8 @@
             {% endif %}
         </div>
 
+        {% if is_admin %}
         <div class="row g-4">
-            <!-- 🌟 ฟีเจอร์: บล็อกประวัติบิลสั่งซื้อและเบิกพัสดุ เพื่อให้กดคลิกเข้าไปดูและตรวจสอบความสมบูรณ์ย้อนหลังได้ -->
             <div class="col-md-6">
                 <div class="bg-white border p-4 rounded-4 shadow-sm h-100">
                     <h5 class="fw-bold mb-3 text-dark">📄 ประวัติใบสั่งซื้อ/ใบเบิกคลังล่าสุด</h5>
@@ -254,7 +249,6 @@
                 </div>
             </div>
 
-            <!-- กล่องแสดงผลประวัติ Logs กิจกรรมคลัง -->
             <div class="col-md-6">
                 <div class="bg-white border p-4 rounded-4 shadow-sm h-100">
                     <h5 class="fw-bold mb-3 text-secondary">📋 บันทึกประวัติกิจกรรมสต็อก (Logs)</h5>
@@ -278,6 +272,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -285,7 +280,6 @@
         let cart = JSON.parse(localStorage.getItem('electrohub_cart')) || [];
         updateCartUI();
 
-        // 🌟 ฟังก์ชันแสดงผลป๊อปอัปแจ้งเตือนสวยๆ แทนการใช้กล่อง Alert ดับชีวิตหน้าจอแบบเดิม
         function showNotification(message) {
             document.getElementById('toastMessage').innerText = message;
             let toastEl = document.getElementById('liveToast');
