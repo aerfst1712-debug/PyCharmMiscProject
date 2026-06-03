@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request, redirect, jsonify, session
 import sqlite3
 from datetime import datetime
+import
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -20,6 +21,18 @@ def get_db():
 
 def update_db_structure():
     conn = get_db()
+    try:
+        conn.execute('ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT "ยังไม่เลือกช่องทาง"')
+    except:
+        pass
+    try:
+        conn.execute('ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT "รอดำเนินการ"')
+    except:
+        pass
+    try:
+        conn.execute('ALTER TABLE orders ADD COLUMN slip_image TEXT DEFAULT NULL')
+    except:
+        pass
     # 1. ตารางสินค้าหลัก
     conn.execute('''
         CREATE TABLE IF NOT EXISTS components (
