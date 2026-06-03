@@ -1,243 +1,375 @@
-import os
-from flask import Flask, render_template, request, redirect, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, abort, jsonify, session, Response
 import sqlite3
+import csv
+import io
 from datetime import datetime
-import
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'electrohub_secret_key_1234'
+# 🔑 ต้องตั้งรหัสลับ Secret Key เพื่อใช้เข้ารหัสระบบคุกกี้ Session ป้องกันการปลอมแปลงสิทธิ์
+app.secret_key = 'electrohub_labs_super_secret_key_999'
 
-# ตั้งค่าโฟลเดอร์สำหรับเก็บไฟล์สลิปโอนเงิน
-UPLOAD_FOLDER = 'static/slips'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+DATABASE = 'electronics.db'
+ADMIN_PASSWORD = '1234'  # รหัสผ่านหลักของแอดมิน
+
 
 def get_db():
-    conn = sqlite3.connect('electronics.db')
+    conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def update_db_structure():
     conn = get_db()
     try:
-        conn.execute('ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT "ยังไม่เลือกช่องทาง"')
-    except:
+        conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
         pass
     try:
-        conn.execute('ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT "รอดำเนินการ"')
-    except:
+        conn.execute("ALTER TABLE components ADD COLUMN datasheet_url TEXT")
+    except sqlite3.OperationalError:
         pass
-    try:
-        conn.execute('ALTER TABLE orders ADD COLUMN slip_image TEXT DEFAULT NULL')
-    except:
-        pass
-    # 1. ตารางสินค้าหลัก
+
     conn.execute('''
-        CREATE TABLE IF NOT EXISTS components (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            stock INTEGER NOT NULL,
-            price INTEGER NOT NULL,
-            description TEXT,
-            image_url TEXT
-        )
-    ''')
-    # 2. ตาราง Logs กิจกรรม
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS stock_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            component_name TEXT NOT NULL,
-            action_type TEXT NOT NULL,
-            timestamp TEXT NOT NULL
-        )
-    ''')
-    # 3. ตารางประวัติใบสั่งซื้อหลัก (เพิ่มฟิลด์สถานะและการจ่ายเงินสำหรับ Hybrid Checkout)
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            order_date TEXT NOT NULL,
-            total_price INTEGER NOT NULL,
-            payment_method TEXT DEFAULT 'ยังไม่เลือกช่องทาง',
-            payment_status TEXT DEFAULT 'รอดำเนินการ',
-            slip_image TEXT DEFAULT NULL
-        )
-    ''')
-    # 4. ตารางรายการสินค้าในแต่ละใบสั่งซื้อ
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS order_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            order_id INTEGER NOT NULL,
-            component_id INTEGER NOT NULL,
-            component_name TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
-            price_per_piece INTEGER NOT NULL,
-            FOREIGN KEY(order_id) REFERENCES orders(id)
-        )
-    ''')
+                 CREATE TABLE IF NOT EXISTS stock_logs
+                 (
+                     id
+                     INTEGER
+                     PRIMARY
+                     KEY
+                     AUTOINCREMENT,
+                     component_name
+                     TEXT
+                     NOT
+                     NULL,
+                     action_type
+                     TEXT
+                     NOT
+                     NULL,
+                     timestamp
+                     TEXT
+                     NOT
+                     NULL
+                 )
+                 ''')
     conn.commit()
+
+    cursor = conn.execute('SELECT COUNT(*) FROM components')
+    if cursor.fetchone()[0] == 0:
+        default_components = [
+            ('IC LM358', 'Integrated Circuit', '50 บาท', 'https://th.rs-online.com/images/F4852924-01.jpg',
+             'ไอซีขยายสัญญาณ Low Power Dual Operational Amplifier นิยมใช้ในวงจรกรองสัญญาณและวงจรเปรียบเทียบแรงดัน',
+             'ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 3V ถึง 32V, จำนวนช่องสัญญาณ: 2 ช่อง', 100,
+             'https://www.ti.com/lit/ds/symlink/lm358.pdf'),
+            ('Arduino Uno R3', 'Microcontroller', '250 บาท',
+             'https://docs.arduino.cc/static/29849b29d499ec249f056bc293d07ec5/A000066_featured.jpg',
+             'บอร์ดไมโครคอนโทรลเลอร์โอเพนซอร์สยอดนิยมสำหรับเรียนรู้และพัฒนาระบบฝังตัว วงจรอิเล็กทรอนิกส์ และหุ่นยนต์',
+             'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา', 4,
+             'https://docs.arduino.cc/resources/datasheets/A000066-datasheet-pdf')
+        ]
+        conn.executemany('''
+                         INSERT INTO components (name, category, price, image_url, description, specs, stock,
+                                                 datasheet_url)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                         ''', default_components)
+        conn.commit()
     conn.close()
 
-# รันเพื่อตรวจสอบตารางทุกครั้งที่เปิดโปรแกรม
-update_db_structure()
+
+# 🔒 ฟังก์ชันเช็คสิทธิ์แอดมินผ่าน Session ชั่วคราวบนเว็บ
+def is_logged_in_admin():
+    return session.get('is_admin') == True
+
 
 @app.route('/')
-def index():
-    is_admin = session.get('is_admin', False)
-    search_query = request.args.get('search', '')
-    current_category = request.args.get('category', '')
+def home():
+    is_admin = is_logged_in_admin()
+    search_query = request.args.get('search', '').strip()
+    category_filter = request.args.get('category', '').strip()
 
     conn = get_db()
-
-    # ดึงหมวดหมู่ทั้งหมดสำหรับทำปุ่มตัวกรอง
-    categories_res = conn.execute('SELECT DISTINCT category FROM components').fetchall()
-    categories = [row['category'] for row in categories_res]
-
-    # สร้าง SQL Query ตามการค้นหาและการกรองหมวดหมู่
-    query = 'SELECT * FROM components WHERE 1=1'
-    params = []
+    cat_cursor = conn.execute('SELECT DISTINCT category FROM components')
+    categories = [row['category'] for row in cat_cursor.fetchall()]
 
     if search_query:
-        query += ' AND (name LIKE ? OR description LIKE ? OR category LIKE ?)'
-        params.extend([f'%{search_query}%', f'%{search_query}%', f'%{search_query}%'])
-
-    if current_category:
-        query += ' AND category = ?'
-        params.append(current_category)
-
-    products = conn.execute(query, params).fetchall()
-
-    # คำนวณตัวเลขแผง Dashboard
-    total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0] or 0
-    total_stock = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0] or 0
-    low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock > 0 AND stock < 15').fetchone()[0] or 0
-    out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock = 0').fetchone()[0] or 0
-
-    value_res = conn.execute('SELECT SUM(stock * price) FROM components').fetchone()[0]
-    total_warehouse_value = value_res or 0
-
-    # ดึงประวัติใบสั่งซื้อล่าสุด 6 รายการ และ Logs ล่าสุด 8 รายการ
-    recent_orders = conn.execute('SELECT * FROM orders ORDER BY id DESC LIMIT 6').fetchall()
-    logs = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 8').fetchall()
-
-    conn.close()
-
-    return render_template('index.html', products=products, categories=categories,
-                           current_category=current_category, search_query=search_query,
-                           total_items=total_items, total_stock=total_stock,
-                           low_stock_count=low_stock_count, out_of_stock_count=out_of_stock_count,
-                           total_warehouse_value=total_warehouse_value, recent_orders=recent_orders,
-                           logs=logs, is_admin=is_admin)
-
-@app.route('/checkout', methods=['POST'])
-def checkout():
-    data = request.get_json()
-    if not data or 'cart' not in data or len(data['cart']) == 0:
-        return jsonify({'success': False, 'message': 'ไม่มีสินค้าในตะกร้า'})
-
-    conn = get_db()
-    cart = data['cart']
-
-    # 1. ตรวจสอบสต็อกสินค้าทั้งหมดก่อนตัดจริง
-    for item in cart:
-        prod = conn.execute('SELECT * FROM components WHERE id = ?', (item['id'],)).fetchone()
-        if not prod:
-            conn.close()
-            return jsonify({'success': False, 'message': f'ไม่พบชิ้นส่วนรหัส {item["id"]} ในระบบ'})
-        if prod['stock'] < int(item['qty']):
-            conn.close()
-            return jsonify({'success': False, 'message': f'สินค้า {prod["name"]} มีสต็อกไม่พอ (เหลือ {prod["stock"]} ชิ้น)'})
-
-    # 2. บันทึกข้อมูลลงตารางใบสั่งซื้อหลัก
-    order_date = datetime.now().strftime('%d/%m/%Y %H:%M')
-    total_price = sum(int(item['price']) * int(item['qty']) for item in cart)
-
-    cursor = conn.cursor()
-    cursor.execute('INSERT INTO orders (order_date, total_price, payment_method, payment_status) VALUES (?, ?, ?, ?)',
-                   (order_date, total_price, 'ยังไม่เลือกช่องทาง', 'รอดำเนินการ'))
-    order_id = cursor.lastrowid
-
-    # 3. หักสต็อกสินค้าจริง และบันทึกรายการสินค้าของบิลนั้นๆ พร้อมลงบันทึกกิจกรรม (Logs)
-    now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-    for item in cart:
-        qty = int(item['qty'])
-        conn.execute('UPDATE components SET stock = stock - ? WHERE id = ?', (qty, item['id']))
-        conn.execute('INSERT INTO order_items (order_id, component_id, component_name, quantity, price_per_piece) VALUES (?, ?, ?, ?, ?)',
-                     (order_id, item['id'], item['name'], qty, item['price']))
-        conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
-                     (item['name'], f'📉 ถูกเบิกจำนวน {qty} ชิ้น (บิล #{order_id})', now_str))
-
-    conn.commit()
-    conn.close()
-
-    # ส่ง order_id กลับไปเพื่อให้ Javascript พาวาร์ปไปหน้าตรวจสอบการชำระเงิน
-    return jsonify({'success': True, 'message': 'บันทึกคำสั่งซื้อเรียบร้อย!', 'order_id': order_id})
-
-@app.route('/order/<int:order_id>')
-def order_detail(order_id):
-    conn = get_db()
-    order = conn.execute('SELECT * FROM orders WHERE id = ?', (order_id,)).fetchone()
-    if not order:
-        conn.close()
-        return "ไม่พบใบสั่งซื้อนี้ในระบบ", 404
-
-    items = conn.execute('SELECT * FROM order_items WHERE order_id = ?', (order_id,)).fetchall()
-    conn.close()
-    return render_template('order.html', order=order, items=items)
-
-@app.route('/order/<int:order_id>/update_payment', methods=['POST'])
-def update_payment(order_id):
-    method = request.form.get('payment_method')
-    status = 'รอดำเนินการ'
-    slip_filename = None
-
-    if method == 'cash_on_pickup':
-        method_th = 'จ่ายเงินสดตอนมารับของ'
-        status = 'ชำระเงินหน้าร้าน'
-    elif method == 'qr_now':
-        method_th = 'โอนเงินผ่าน QR Code'
-        status = 'ชำระเงินสำเร็จ (QR)'
-    elif method == 'upload_slip':
-        method_th = 'โอนเงินแบบ Manual (แนบสลิป)'
-        file = request.files.get('slip_image')
-        if file and file.filename != '':
-            filename = secure_filename(f"order_{order_id}_{file.filename}")
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            slip_filename = f"/static/slips/{filename}"
-            status = 'รอตรวจสอบสลิป'
+        query = "SELECT * FROM components WHERE name LIKE ? OR category LIKE ?"
+        cursor = conn.execute(query, (f"%{search_query}%", f"%{search_query}%"))
+    elif category_filter:
+        query = "SELECT * FROM components WHERE category = ?"
+        cursor = conn.execute(query, (category_filter,))
     else:
-        return redirect(f'/order/{order_id}')
+        cursor = conn.execute('SELECT * FROM components')
 
-    conn = get_db()
-    if slip_filename:
-        conn.execute('UPDATE orders SET payment_method=?, payment_status=?, slip_image=? WHERE id=?',
-                     (method_th, status, slip_filename, order_id))
-    else:
-        conn.execute('UPDATE orders SET payment_method=?, payment_status=? WHERE id=?',
-                     (method_th, status, order_id))
+    products = [dict(row) for row in cursor.fetchall()]
 
-    now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-    conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
-                 (f'บิลออเดอร์ #{order_id}', f'💳 อัปเดตการชำระเงิน: {method_th} [สถานะ: {status}]', now_str))
+    total_items = total_stock = low_stock_count = out_of_stock_count = 0
+    logs = []
 
-    conn.commit()
+    if is_admin:
+        total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0]
+        total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
+        total_stock = total_stock_res if total_stock_res is not None else 0
+        low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0]
+        out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0]
+
+        try:
+            log_cursor = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 10')
+            logs = log_cursor.fetchall()
+        except sqlite3.OperationalError:
+            logs = []
+
     conn.close()
-    return redirect(f'/order/{order_id}')
+    return render_template('index.html',
+                           products=products,
+                           is_admin=is_admin,
+                           search_query=search_query,
+                           categories=categories,
+                           current_category=category_filter,
+                           total_items=total_items,
+                           total_stock=total_stock,
+                           low_stock_count=low_stock_count,
+                           out_of_stock_count=out_of_stock_count,
+                           logs=logs)
 
+
+# 🔑 เส้นทางเข้าสู่ระบบและออกจากระบบผ่าน Session ฟอร์ม
 @app.route('/login', methods=['POST'])
 def login():
-    password = request.form.get('password')
-    if password == '1234':
-        session['is_admin'] = True
-    return redirect('/')
+    password = request.form.get('password', '')
+    if password == ADMIN_PASSWORD:
+        session['is_admin'] = True  # ฝังสถานะแอดมินเข้ารหัสลงในบราวเซอร์สำเร็จ
+    return redirect(url_for('home'))
+
 
 @app.route('/logout')
 def logout():
-    session.pop('is_admin', None)
-    return redirect('/')
+    session.pop('is_admin', None)  # ล้างสถานะสิทธิ์แอดมินออกทันทีเมื่อกดออกจากระบบ
+    return redirect(url_for('home'))
 
-# หมายเหตุ: สำหรับฟังก์ชันเบื้องต้นอื่นๆ (add, edit, delete, update_stock) ให้คงไว้ตามโครงสร้างเดิมของคุณได้เลยครับ
+
+@app.route('/update_stock/<int:product_id>/<string:action>')
+def update_stock(product_id, action):
+    if not is_logged_in_admin(): return abort(403)
+
+    conn = get_db()
+    comp = conn.execute('SELECT name, stock FROM components WHERE id = ?', (product_id,)).fetchone()
+
+    if comp:
+        current_stock = comp['stock'] or 0
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
+        if action == 'increase':
+            conn.execute('UPDATE components SET stock = stock + 1 WHERE id = ?', (product_id,))
+            conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
+                         (comp['name'], f'➕ ปรับเพิ่มสต็อกด่วนเป็น {current_stock + 1} ชิ้น', now_str))
+        elif action == 'decrease' and current_stock > 0:
+            conn.execute('UPDATE components SET stock = MAX(0, stock - 1) WHERE id = ?', (product_id,))
+            conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
+                         (comp['name'], f'➖ ปรับลดสต็อกด่วนเหลือ {current_stock - 1} ชิ้น', now_str))
+        conn.commit()
+    conn.close()
+    return redirect(url_for('home'))
+
+
+@app.route('/product/<int:product_id>')
+def product_detail(product_id):
+    conn = get_db()
+    product = conn.execute('SELECT * FROM components WHERE id = ?', (product_id,)).fetchone()
+    conn.close()
+
+    if product is None: abort(404)
+
+    product_dict = dict(product)
+    product_dict['specs'] = [s.strip() for s in product_dict['specs'].split(',')] if product_dict['specs'] else []
+    return render_template('product.html', product=product_dict, is_admin=is_logged_in_admin())
+
+
+@app.route('/add', methods=['GET', 'POST'])
+def add_product():
+    if not is_logged_in_admin(): return abort(403)
+
+    if request.method == 'POST':
+        name = request.form['name']
+        category = request.form['category']
+        price = request.form['price']
+        image_url = request.form['image_url']
+        description = request.form['description']
+        specs = request.form['specs']
+
+        # 🧪 Form Validation หลังบ้าน: ดักจับข้อมูลสต็อกและสเปกก่อนเซฟเข้า Database
+        try:
+            stock = int(request.form.get('stock', 0))
+            if stock < 0: stock = 0
+        except ValueError:
+            stock = 0
+
+        datasheet_url = request.form.get('datasheet_url', '')
+
+        conn = get_db()
+        conn.execute('''
+                     INSERT INTO components (name, category, price, image_url, description, specs, stock, datasheet_url)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     ''', (name, category, price, image_url, description, specs, stock, datasheet_url))
+
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+        conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
+                     (name, '🆕 เพิ่มอุปกรณ์ใหม่เข้าสู่ระบบคลังชิ้นส่วน', now_str))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('home'))
+
+    return render_template('add.html', is_admin=True)
+
+
+@app.route('/edit/<int:product_id>', methods=['GET', 'POST'])
+def edit_product(product_id):
+    if not is_logged_in_admin(): return abort(403)
+
+    conn = get_db()
+    if request.method == 'POST':
+        name = request.form['name']
+        category = request.form['category']
+        price = request.form['price']
+        image_url = request.form['image_url']
+        description = request.form['description']
+        specs = request.form['specs']
+
+        try:
+            stock = int(request.form.get('stock', 0))
+            if stock < 0: stock = 0
+        except ValueError:
+            stock = 0
+
+        datasheet_url = request.form.get('datasheet_url', '')
+
+        conn.execute('''
+                     UPDATE components
+                     SET name=?,
+                         category=?,
+                         price=?,
+                         image_url=?,
+                         description=?,
+                         specs=?,
+                         stock=?,
+                         datasheet_url=?
+                     WHERE id = ?
+                     ''', (name, category, price, image_url, description, specs, stock, datasheet_url, product_id))
+
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+        conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
+                     (name, '✏️ แก้ไขอัปเดตข้อมูลรายละเอียดชิ้นส่วน', now_str))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('home'))
+
+    product = conn.execute('SELECT * FROM components WHERE id = ?', (product_id,)).fetchone()
+    conn.close()
+    return render_template('edit.html', product=product, is_admin=True)
+
+
+@app.route('/delete/<int:product_id>')
+def delete_product(product_id):
+    if not is_logged_in_admin(): return abort(403)
+
+    conn = get_db()
+    comp = conn.execute('SELECT name FROM components WHERE id = ?', (product_id,)).fetchone()
+    if comp:
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+        conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
+                     (comp['name'], '🗑️ ลบอุปกรณ์เบอร์นี้ออกจากคลังข้อมูล', now_str))
+        conn.execute('DELETE FROM components WHERE id = ?', (product_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('home'))
+
+
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    data = request.json
+    cart_items = data.get('cart', [])
+    if not cart_items: return jsonify({'success': False, 'message': 'ไม่มีสินค้าในตะกร้า'}), 400
+
+    conn = get_db()
+    now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+    try:
+        for item in cart_items:
+            product_id = item.get('id')
+            qty = int(item.get('qty', 1))
+
+            db_item = conn.execute('SELECT name, stock FROM components WHERE id = ?', (product_id,)).fetchone()
+            if not db_item: return jsonify({'success': False, 'message': f'ไม่พบสินค้า ID {product_id}'}), 400
+
+            current_stock = db_item['stock'] or 0
+            if current_stock < qty:
+                return jsonify({'success': False,
+                                'message': f'สินค้า {db_item["name"]} เหลือไม่เพียงพอ (เหลือ {current_stock} ชิ้น)'}), 400
+
+            conn.execute('UPDATE components SET stock = stock - ? WHERE id = ?', (qty, product_id))
+            conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
+                         (db_item['name'], f'🛒 ลูกค้าสั่งเบิกตัดยอดคลังสินค้าจำนวน {qty} ชิ้น', now_str))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'สั่งซื้อตัดยอดคลังสินค้าจำลองเสร็จเรียบร้อย!'})
+    except Exception as e:
+        conn.close()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# 📊 💾 เส้นทางใหม่: แปลงฐานข้อมูล SQLite เป็นไฟล์รายงานสรุป .CSV สำหรับเปิดใน Excel
+@app.route('/export_report')
+def export_report():
+    if not is_logged_in_admin(): return abort(403)
+
+    conn = get_db()
+    cursor = conn.execute('SELECT id, name, category, price, stock FROM components')
+    rows = cursor.fetchall()
+    conn.close()
+
+    # สร้างบัฟเฟอร์หน่วยความจำชั่วคราวในการเขียนตารางข้อมูลเพื่อส่งออกไฟล์
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # เขียนหัวคอลัมน์ของตารางข้อมูลรายงาน (รองรับภาษาไทย)
+    writer.writerow(['ID อุปกรณ์', 'ชื่ออะไหล่ชิ้นส่วน', 'หมวดหมู่', 'ราคาต่อชิ้น', 'คงเหลือในสต็อกจริง'])
+
+    for row in rows:
+        writer.writerow([row['id'], row['name'], row['category'], row['price'], row['stock']])
+
+    # เข้ารหัสให้ไฟล์มี BOM (Byte Order Mark) ของ UTF-8 เพื่อบังคับให้ Excel อ่านอักษรภาษาไทยได้ถูกต้อง ไม่เพี้ยนเป็นต่างดาว
+    csv_data = "\ufeff" + output.getvalue()
+
+    now_date = datetime.now().strftime('%Y%m%d')
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-disposition": f"attachment; filename=ElectroHub_StockReport_{now_date}.csv"}
+    )
+
+
+@app.route('/reset_db')
+def reset_db():
+    conn = get_db()
+    conn.execute('DROP TABLE IF EXISTS components')
+    conn.execute('DROP TABLE IF EXISTS stock_logs')
+    conn.execute('''
+                 CREATE TABLE components
+                 (
+                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                     name          TEXT NOT NULL,
+                     category      TEXT NOT NULL,
+                     price         TEXT NOT NULL,
+                     image_url     TEXT NOT NULL,
+                     description   TEXT NOT NULL,
+                     specs         TEXT NOT NULL,
+                     stock         INTEGER DEFAULT 0,
+                     datasheet_url TEXT
+                 )
+                 ''')
+    conn.commit()
+    conn.close()
+    update_db_structure()
+    return "รีเซ็ตคลังฐานข้อมูลเริ่มต้นสำเร็จแล้ว!"
+
+
 if __name__ == '__main__':
+    update_db_structure()
     app.run(debug=True)
