@@ -10,37 +10,18 @@
         body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
         h1, h2, h3, .navbar-brand, .stat-num, .modal-title { font-family: 'Chakra Petch', sans-serif; }
         .navbar { background-color: #ffffff !important; border-bottom: 2px solid #0ea5e9; }
-
-        /* 📈 แผง Dashboard สรุปยอดด้านบนเพื่อลดความโล่งของเว็บไซต์ */
         .stat-card { background: white; border-radius: 14px; border: 1px solid #e2e8f0; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .stat-num { font-size: 2.2rem; font-weight: bold; color: #0ea5e9; }
-
-        /* ✨ [HOVER EFFECT] การ์ดลอยตัวและเพิ่มเงานุ่มนวลเมื่อเอาเมาส์ไปชี้ */
-        .product-card {
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        .product-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 12px 20px -3px rgba(14, 165, 233, 0.15);
-            border-color: #0ea5e9;
-        }
-
+        .product-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; overflow: hidden; }
+        .product-card:hover { transform: translateY(-6px); box-shadow: 0 12px 20px -3px rgba(14, 165, 233, 0.15); border-color: #0ea5e9; }
         .price-tag { color: #059669; font-weight: bold; font-size: 1.15rem; }
-        .btn-view { background-color: #f1f5f9; color: #0284c7; border-radius: 20px; font-weight: bold; border: 1px solid #e2e8f0; }
+        .btn-view { background-color: #f1f5f9; color: #0284c7; border-radius: 20px; font-weight: bold; border: 1px solid #e2e8f0; text-decoration: none; display: inline-block; text-center: center; }
         .btn-view:hover { background-color: #e2e8f0; }
         .btn-buy-now { background-color: #0ea5e9; color: #ffffff; border-radius: 20px; font-weight: bold; border: none; }
         .btn-buy-now:hover { background-color: #0284c7; }
         .admin-actions { position: absolute; top: 12px; right: 12px; z-index: 10; display: flex; gap: 6px; }
         .log-box { background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .cart-badge { background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; position: absolute; top: -5px; right: -5px; }
-        .spec-badge { background-color: #f1f5f9; border-left: 4px solid #0ea5e9; color: #1e293b; font-weight: 500; padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; }
-
-        /* ตกแต่งแถบความก้าวหน้า Progress Bar ให้สวยงาม */
         .progress { height: 8px; border-radius: 10px; background-color: #e2e8f0; }
     </style>
 </head>
@@ -61,8 +42,8 @@
                 </form>
                 {% else %}
                     <span class="badge bg-danger rounded-pill px-2.5 py-1.5 small fw-bold">👷 Admin Mode</span>
-                    <a href="/add" class="btn btn-success btn-sm rounded-pill px-2.5 fw-bold">➕ เพิ่มสินค้า</a>
-                    <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-2.5">ออกจากระบบ 🚪</a>
+                    <a href="/add" class="btn btn-success btn-sm rounded-pill px-2.5 fw-bold text-decoration-none">➕ เพิ่มสินค้า</a>
+                    <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-2.5 text-decoration-none">ออกจากระบบ 🚪</a>
                 {% endif %}
             </div>
         </div>
@@ -92,40 +73,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="productDetailModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content p-3 border-0 shadow" style="border-radius: 16px;">
-                <div class="modal-header border-0 pb-0">
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-4">
-                        <div class="col-md-5 text-center">
-                            <div class="p-3 border rounded bg-light mb-3">
-                                <img id="modalImg" src="" alt="" class="img-fluid" style="max-height: 220px; object-fit: contain;">
-                            </div>
-                            <a id="modalDatasheet" href="" target="_blank" class="btn btn-sm btn-outline-info w-100 rounded-pill fw-bold mb-2">📄 เปิดคู่มือ Datasheet (PDF)</a>
-                        </div>
-                        <div class="col-md-7">
-                            <span id="modalCategory" class="badge bg-primary mb-2"></span>
-                            <h3 id="modalName" class="fw-bold text-dark"></h3>
-                            <h5 id="modalPrice" class="text-success fw-bold my-2"></h5>
-                            <div id="modalStockBadge" class="p-1 px-3 rounded small d-inline-block fw-bold mb-3"></div>
-
-                            <h6 class="fw-bold text-primary mt-2">📌 รายละเอียด:</h6>
-                            <p id="modalDescription" class="text-secondary small lh-lg"></p>
-
-                            <h6 class="fw-bold text-primary mt-3">🛠️ สเปกทางเทคนิค:</h6>
-                            <div id="modalSpecsList" class="d-flex flex-column gap-1"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="container my-5">
-
         <div class="row g-3 mb-4">
             <div class="col-md-3 col-6">
                 <div class="stat-card">
@@ -155,7 +103,7 @@
 
         {% if is_admin %}
         <div class="d-flex justify-content-end mb-4">
-            <a href="/export_report" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" style="background-color: #0ea5e9; border:none;">
+            <a href="/export_report" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm text-decoration-none" style="background-color: #0ea5e9; border:none;">
                 📥 ดาวน์โหลดรายงานสต็อก (.CSV Excel)
             </a>
         </div>
@@ -172,9 +120,9 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
-            <a href="/" class="btn rounded-pill px-3 fw-bold btn-sm {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ทั้งหมด</a>
+            <a href="/" class="btn rounded-pill px-3 fw-bold btn-sm text-decoration-none {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ทั้งหมด</a>
             {% for cat in categories %}
-                <a href="/?category={{ cat }}" class="btn rounded-pill px-3 fw-bold btn-sm {% if current_category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if current_category == cat %}background-color: #0ea5e9; border:none;{% endif %}">{{ cat }}</a>
+                <a href="/?category={{ cat }}" class="btn rounded-pill px-3 fw-bold btn-sm text-decoration-none {% if current_category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if current_category == cat %}background-color: #0ea5e9; border:none;{% endif %}">{{ cat }}</a>
             {% endfor %}
         </div>
 
@@ -186,8 +134,8 @@
 
                         {% if is_admin %}
                         <div class="admin-actions">
-                            <a href="/edit/{{ product.id }}" class="btn btn-warning btn-sm rounded-circle shadow" title="แก้ไข">✏️</a>
-                            <a href="/delete/{{ product.id }}" class="btn btn-danger btn-sm rounded-circle shadow" title="ลบ" onclick="return confirm('ต้องการลบชิ้นส่วนนี้?')">🗑️</a>
+                            <a href="/edit/{{ product.id }}" class="btn btn-warning btn-sm rounded-circle shadow text-decoration-none" title="แก้ไข">✏️</a>
+                            <a href="/delete/{{ product.id }}" class="btn btn-danger btn-sm rounded-circle shadow text-decoration-none" title="ลบ" onclick="return confirm('ต้องการลบชิ้นส่วนนี้?')">🗑️</a>
                         </div>
                         {% endif %}
 
@@ -218,29 +166,24 @@
                                 </div>
                             </div>
 
-                            <div class="d-none" id="prod-desc-{{ product.id }}">{{ product.description }}</div>
-                            <div class="d-none" id="prod-specs-{{ product.id }}">{{ product.specs }}</div>
-                            <div class="d-none" id="prod-ds-{{ product.id }}">{{ product.datasheet_url or '' }}</div>
-                            <div class="d-none" id="prod-stocknum-{{ product.id }}">{{ product.stock or 0 }}</div>
-
                             <p class="card-text text-muted text-truncate mb-3 small">{{ product.description }}</p>
 
                             {% if is_admin %}
                             <div class="d-flex gap-1 align-items-center mb-3 justify-content-center border-top border-bottom py-2">
                                 <span class="small text-muted me-2">🛠️ ปรับยอด:</span>
-                                <a href="/update_stock/{{ product.id }}/decrease" class="btn btn-outline-danger btn-sm rounded-circle fw-bold {% if (product.stock or 0) <= 0 %}disabled{% endif %}" style="width: 28px; height: 28px; line-height: 12px;">-</a>
+                                <a href="/update_stock/{{ product.id }}/decrease" class="btn btn-outline-danger btn-sm rounded-circle fw-bold text-decoration-none {% if (product.stock or 0) <= 0 %}disabled{% endif %}" style="width: 28px; height: 28px; line-height: 12px;">-</a>
                                 <span class="fw-bold mx-2">{{ product.stock or 0 }}</span>
-                                <a href="/update_stock/{{ product.id }}/increase" class="btn btn-outline-success btn-sm rounded-circle fw-bold" style="width: 28px; height: 28px; line-height: 12px;">+</a>
+                                <a href="/update_stock/{{ product.id }}/increase" class="btn btn-outline-success btn-sm rounded-circle fw-bold text-decoration-none" style="width: 28px; height: 28px; line-height: 12px;">+</a>
                             </div>
                             {% endif %}
 
                             <div class="d-flex justify-content-between align-items-center mt-auto">
-                                <span class="price-tag" id="prod-price-{{ product.id }}">💰 {{ product.price }}</span>
+                                <span class="price-tag">💰 <span id="prod-price-{{ product.id }}">{{ product.price }}</span> บาท</span>
                             </div>
 
                             <div class="row g-2 mt-2">
                                 <div class="col-5">
-                                    <button class="btn btn-view btn-sm w-100 py-2 fw-bold" onclick="openDetailModal('{{ product.id }}')">🔬 รายละเอียด</button>
+                                    <a href="/product/{{ product.id }}" class="btn btn-view btn-sm w-100 py-2 fw-bold">🔬 รายละเอียด</a>
                                 </div>
                                 <div class="col-7">
                                     {% if (product.stock or 0) > 0 %}
@@ -276,7 +219,6 @@
                 </table>
             </div>
         </div>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -297,8 +239,7 @@
             } else {
                 let name = document.getElementById(`prod-name-${id}`).innerText;
                 let img = document.getElementById(`prod-img-${id}`).src;
-                let priceText = document.getElementById(`prod-price-${id}`).innerText;
-                let priceNum = parseInt(priceText.replace(/[^0-9]/g, '')) || 0;
+                let priceNum = parseInt(document.getElementById(`prod-price-${id}`).innerText) || 0;
 
                 cart.push({ id: id, name: name, img: img, price: priceNum, maxStock: maxStock, qty: 1 });
             }
@@ -392,57 +333,6 @@
                 `;
             });
             listContainer.innerHTML = html;
-        }
-
-        function openDetailModal(id) {
-            let name = document.getElementById(`prod-name-${id}`).innerText;
-            let img = document.getElementById(`prod-img-${id}`).src;
-            let cat = document.getElementById(`prod-cat-${id}`).innerText;
-            let price = document.getElementById(`prod-price-${id}`).innerText;
-            let desc = document.getElementById(`prod-desc-${id}`).innerText;
-            let specsRaw = document.getElementById(`prod-specs-${id}`).innerText;
-            let dsUrl = document.getElementById(`prod-ds-${id}`).innerText;
-            let stockNum = parseInt(document.getElementById(`prod-stocknum-${id}`).innerText) || 0;
-
-            document.getElementById('modalName').innerText = name;
-            document.getElementById('modalImg').src = img;
-            document.getElementById('modalCategory').innerText = cat;
-            document.getElementById('modalPrice').innerText = price;
-            document.getElementById('modalDescription').innerText = desc;
-
-            let stockBadge = document.getElementById('modalStockBadge');
-            if (stockNum >= 15) {
-                stockBadge.className = "p-1 px-3 rounded small d-inline-block fw-bold mb-3 text-success bg-success-subtle";
-                stockBadge.innerText = `📦 คลังพร้อมจ่าย: ${stockNum} ชิ้น`;
-            } else if (stockNum > 0) {
-                stockBadge.className = "p-1 px-3 rounded small d-inline-block fw-bold mb-3 text-warning bg-warning-subtle";
-                stockBadge.innerText = `⚠️ อะไหล่ใกล้หมด: เหลือ ${stockNum} ชิ้น`;
-            } else {
-                stockBadge.className = "p-1 px-3 rounded small d-inline-block fw-bold mb-3 text-danger bg-danger-subtle";
-                stockBadge.innerText = `❌ สินค้าหมดคลังชั่วคราว`;
-            }
-
-            let dsBtn = document.getElementById('modalDatasheet');
-            if (dsUrl && dsUrl.trim() !== '') {
-                dsBtn.href = dsUrl;
-                dsBtn.classList.remove('d-none');
-            } else {
-                dsBtn.classList.add('d-none');
-            }
-
-            let specsContainer = document.getElementById('modalSpecsList');
-            specsContainer.innerHTML = '';
-            if (specsRaw) {
-                specsRaw.split(',').forEach(spec => {
-                    if (spec.trim() !== '') {
-                        let div = document.createElement('div');
-                        div.className = "spec-badge";
-                        div.innerText = `✔️ ${spec.trim()}`;
-                        specsContainer.appendChild(div);
-                    }
-                });
-            }
-            new bootstrap.Modal(document.getElementById('productDetailModal')).show();
         }
 
         function processCheckout() {
