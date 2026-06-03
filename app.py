@@ -17,17 +17,47 @@ def get_db():
     return conn
 
 
+# 🛠️ จุดที่ 1: ปรับปรุงโครงสร้างให้ตรวจสอบและจำค่าสต็อกถาวร ไม่ให้เขียนทับข้อมูลเก่า
 def update_db_structure():
     conn = get_db()
-    try:
-        conn.execute("ALTER TABLE components ADD COLUMN stock INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
-        pass
-    try:
-        conn.execute("ALTER TABLE components ADD COLUMN datasheet_url TEXT")
-    except sqlite3.OperationalError:
-        pass
 
+    # 1. สร้างตารางหลัก components พร้อมคอลัมน์ทั้งหมดที่จำเป็น (ถ้ายังไม่มีตาราง)
+    conn.execute('''
+                 CREATE TABLE IF NOT EXISTS components
+                 (
+                     id
+                     INTEGER
+                     PRIMARY
+                     KEY
+                     AUTOINCREMENT,
+                     name
+                     TEXT
+                     NOT
+                     NULL,
+                     category
+                     TEXT
+                     NOT
+                     NULL,
+                     price
+                     TEXT
+                     NOT
+                     NULL,
+                     image_url
+                     TEXT,
+                     description
+                     TEXT,
+                     specs
+                     TEXT,
+                     stock
+                     INTEGER
+                     DEFAULT
+                     0,
+                     datasheet_url
+                     TEXT
+                 )
+                 ''')
+
+    # 2. สร้างตารางเก็บประวัติกิจกรรม (Logs)
     conn.execute('''
                  CREATE TABLE IF NOT EXISTS stock_logs
                  (
@@ -52,8 +82,13 @@ def update_db_structure():
                  ''')
     conn.commit()
 
+    # 3. ตรวจสอบจำนวนสินค้าปัจจุบันในคลัง
     cursor = conn.execute('SELECT COUNT(*) FROM components')
-    if cursor.fetchone()[0] == 0:
+    count = cursor.fetchone()[0]
+
+    # ✨ ระบบจะใส่ค่าเริ่มต้นให้ "เฉพาะตอนที่ฐานข้อมูลว่างเปล่าจริงๆ" เท่านั้น
+    # ถ้าคุณเคยรันระบบไปแล้ว หรือมีการปรับสต็อก ข้อมูลเดิมของคุณจะถูกจำไว้ถาวรและไม่หายแน่นอน
+    if count == 0:
         default_components = [
             ('IC LM358', 'Integrated Circuit', '50 บาท', 'https://th.rs-online.com/images/F4852924-01.jpg',
              'ไอซีขยายสัญญาณ Low Power Dual Operational Amplifier นิยมใช้ในวงจรกรองสัญญาณและวงจรเปรียบเทียบแรงดัน',
@@ -62,8 +97,8 @@ def update_db_structure():
             ('Arduino Uno R3', 'Microcontroller', '250 บาท',
              'https://docs.arduino.cc/static/29849b29d499ec249f056bc293d07ec5/A000066_featured.jpg',
              'บอร์ดไมโครคอนโทรลเลอร์โอเพนซอร์สยอดนิยมสำหรับเรียนรู้และพัฒนาระบบฝังตัว วงจรอิเล็กทรอนิกส์ และหุ่นยนต์',
-             'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา', 12,
-             'https://docs.arduino.cc/resources/datasheets/A000066-datasheet-pdf')
+             'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา',
+             12, 'https://docs.arduino.cc/resources/datasheets/A000066-datasheet-pdf')
         ]
         conn.executemany('''
                          INSERT INTO components (name, category, price, image_url, description, specs, stock,
@@ -71,6 +106,7 @@ def update_db_structure():
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                          ''', default_components)
         conn.commit()
+
     conn.close()
 
 
@@ -99,14 +135,12 @@ def home():
 
     products = [dict(row) for row in cursor.fetchall()]
 
-    # 📊 คำนวณสถิติเพื่อส่งไปแสดงผลบน Dashboard
     total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0]
     total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
     total_stock = total_stock_res if total_stock_res is not None else 0
     low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0]
     out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0]
 
-    # 📈 คำนวณยอดสต็อกแยกตามหมวดหมู่เพื่อไปวาดกราฟวงกลม
     chart_data = []
     chart_labels = []
     chart_cursor = conn.execute('SELECT category, SUM(stock) as total_cat_stock FROM components GROUP BY category')
@@ -327,7 +361,6 @@ def export_report():
         mimetype="text/csv",
         headers={"Content-disposition": f"attachment; filename=ElectroHub_StockReport_{now_date}.csv"}
     )
-
 
 if __name__ == '__main__':
     update_db_structure()
