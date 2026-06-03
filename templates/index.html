@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; }
-        h1, h2, h3, .navbar-brand, .stat-num { font-family: 'Chakra Petch', sans-serif; }
+        h1, h2, h3, .navbar-brand, .stat-num, .modal-title { font-family: 'Chakra Petch', sans-serif; }
         .navbar { background-color: #ffffff !important; border-bottom: 2px solid #0ea5e9; }
         .stat-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .stat-num { font-size: 2rem; font-weight: bold; color: #0ea5e9; }
@@ -25,51 +25,47 @@
         .bg-warning-dot { background-color: #f59e0b; }
         .bg-danger-dot { background-color: #ef4444; }
         .log-box { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; }
-
-        /* 🛒 สไตล์ตะกร้าสินค้าแบบสไลด์ข้าง (Cart Offcanvas) */
         .cart-badge { background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; position: absolute; top: -5px; right: -5px; }
         .cart-sidebar { width: 380px !important; }
         .cart-item-img { width: 50px; height: 50px; object-fit: contain; background-color: #f8fafc; border-radius: 6px; }
+        .spec-badge { background-color: #f1f5f9; border-left: 4px solid #0ea5e9; color: #1e293b; font-weight: 500; padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-    <!-- แถบเมนูด้านบน (Navbar) -->
     <nav class="navbar navbar-light p-3 shadow-sm sticky-top">
         <div class="container">
-            <a class="navbar-brand fw-bold fs-3" href="/{% if is_admin %}?pw={{ pw }}&admin=true{% endif %}">⚡ ElectroHub <span style="color: #0ea5e9;">Labs</span></a>
-            <div class="d-flex align-items-center gap-3">
+            <a class="navbar-brand fw-bold fs-3" href="/">⚡ ElectroHub <span style="color: #0ea5e9;">Labs</span></a>
+            <div class="d-flex align-items-center gap-2">
 
-                <!-- 🛒 ปุ่มเปิดตะกร้าสินค้าสำหรับลูกค้า (ทุกคนเห็น) -->
-                <button class="btn btn-outline-dark rounded-pill position-relative px-3 fw-bold btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartSidebar">
+                <button class="btn btn-outline-dark rounded-pill position-relative px-3 fw-bold btn-sm me-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartSidebar">
                     🛒 ตะกร้าของฉัน <span id="cartCountBadge" class="cart-badge d-none">0</span>
                 </button>
 
-                <!-- ฟอร์มแอดมินลับ -->
-                {% if show_login_box or is_admin %}
-                <form method="GET" action="/" class="d-flex gap-1 align-items-center">
-                    <input type="hidden" name="admin" value="true">
-                    <input type="password" name="pw" class="form-control form-control-sm rounded-pill" style="width: 140px;" placeholder="รหัสผ่านแอดมิน" value="{{ pw if is_admin else '' }}">
-                    <button type="submit" class="btn btn-dark btn-sm rounded-pill">🔒 ยืนยัน</button>
+                {% if not is_admin %}
+                <form method="POST" action="/login" class="d-flex gap-1 align-items-center">
+                    <input type="password" name="password" class="form-control form-control-sm rounded-pill" style="width: 120px;" placeholder="รหัสแอดมินลับ">
+                    <button type="submit" class="btn btn-dark btn-sm rounded-pill px-2">🔒 เข้าสู่ระบบ</button>
                 </form>
-                {% endif %}
-
-                {% if is_admin %}
-                    <a href="/add?pw={{ pw }}" class="btn btn-success btn-sm rounded-pill px-3 fw-bold">➕ เพิ่มเบอร์ IC</a>
+                {% else %}
+                    <span class="badge bg-danger rounded-pill px-2.5 py-1.5 small fw-bold">👷 Admin Mode</span>
+                    <a href="/add" class="btn btn-success btn-sm rounded-pill px-2.5 fw-bold">➕ เพิ่มสินค้า</a>
+                    <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-2.5">ออกจากระบบ 🚪</a>
                 {% endif %}
             </div>
         </div>
     </nav>
 
-    <!-- 🛒 Sidebar แสดงตะกร้าสินค้าด้านข้าง (Offcanvas) -->
     <div class="offcanvas offcanvas-end cart-sidebar" tabindex="-1" id="cartSidebar">
         <div class="offcanvas-header border-bottom">
             <h5 class="offcanvas-title fw-bold">🛒 ตะกร้าสินค้าของคุณ</h5>
-            <button type="button" class="btn-close" data-bs-canvas="offcanvas" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column">
+            <div class="d-flex justify-content-end mb-2">
+                <button id="clearCartBtn" class="btn btn-link btn-sm text-secondary d-none p-0" onclick="clearCart()">🗑️ ล้างสินค้าทั้งหมด</button>
+            </div>
             <div id="cartItemsList" class="flex-grow-1 overflow-auto">
-                <!-- รายการในตะกร้าสินค้าจะมาแทรกตรงนี้จาก JS -->
                 <p class="text-muted text-center my-5">ไม่มีสินค้าในตะกร้าขณะนี้</p>
             </div>
             <div class="border-top pt-3 mt-auto">
@@ -84,77 +80,89 @@
         </div>
     </div>
 
-    <div class="container my-5">
+    <div class="modal fade" id="productDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content style-main-box p-3 border-0 shadow" style="border-radius: 16px;">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-4">
+                        <div class="col-md-5 text-center">
+                            <div class="p-3 border rounded bg-light mb-3">
+                                <img id="modalImg" src="" alt="" class="img-fluid" style="max-height: 220px; object-fit: contain;">
+                            </div>
+                            <a id="modalDatasheet" href="" target="_blank" class="btn btn-sm btn-outline-info w-100 rounded-pill fw-bold mb-2">📄 เปิดคู่มือ Datasheet (PDF)</a>
+                        </div>
+                        <div class="col-md-7">
+                            <span id="modalCategory" class="badge bg-primary mb-2"></span>
+                            <h3 id="modalName" class="fw-bold text-dark"></h3>
+                            <h5 id="modalPrice" class="text-success fw-bold my-2"></h5>
+                            <div id="modalStockBadge" class="p-1 px-3 rounded small d-inline-block fw-bold mb-3"></div>
 
-        <!-- 📊 [ADMIN ONLY] สถิติจำนวนสินค้า -->
-        {% if is_admin %}
-        <div class="row g-3 mb-5">
-            <div class="col-md-3 col-6">
-                <div class="stat-card">
-                    <div class="text-muted small fw-bold">📦 เบอร์อะไหล่ทั้งหมด</div>
-                    <div class="stat-num text-dark">{{ total_items }}</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-card">
-                    <div class="text-muted small fw-bold">🔢 จำนวนชิ้นรวมในคลัง</div>
-                    <div class="stat-num text-primary">{{ total_stock }}</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-card border-warning" style="background-color: #fffbdf;">
-                    <div class="text-muted small fw-bold text-warning">⚠️ รายการที่ใกล้หมด (&lt;5)</div>
-                    <div class="stat-num text-warning">{{ low_stock_count }}</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-card border-danger" style="background-color: #fde8e8;">
-                    <div class="text-muted small fw-bold text-danger">🚨 รายการที่หมดแล้ว</div>
-                    <div class="stat-num text-danger">{{ out_of_stock_count }}</div>
+                            <h6 class="fw-bold text-primary mt-2">📌 รายละเอียด:</h6>
+                            <p id="modalDescription" class="text-secondary small lh-lg"></p>
+
+                            <h6 class="fw-bold text-primary mt-3">🛠️ สเปกทางเทคนิค:</h6>
+                            <div id="modalSpecsList" class="d-flex flex-column gap-1"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="container my-5">
+
+        {% if is_admin %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-6"><div class="stat-card"><div class="text-muted small fw-bold">📦 เบอร์อะไหล่ทั้งหมด</div><div class="stat-num text-dark">{{ total_items }}</div></div></div>
+            <div class="col-md-3 col-6"><div class="stat-card"><div class="text-muted small fw-bold">🔢 จำนวนชิ้นรวมในคลัง</div><div class="stat-num text-primary">{{ total_stock }}</div></div></div>
+            <div class="col-md-3 col-6"><div class="stat-card border-warning" style="background-color: #fffbdf;"><div class="text-muted small fw-bold text-warning">⚠️ รายการที่ใกล้หมด (&lt;5)</div><div class="stat-num text-warning">{{ low_stock_count }}</div></div></div>
+            <div class="col-md-3 col-6"><div class="stat-card border-danger" style="background-color: #fde8e8;"><div class="text-muted small fw-bold text-danger">🚨 รายการที่หมดแล้ว</div><div class="stat-num text-danger">{{ out_of_stock_count }}</div></div></div>
+        </div>
+
+        <div class="d-flex justify-content-end mb-4">
+            <a href="/export_report" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-sm">
+                📥 ดาวน์โหลดข้อมูลสต็อกคลังพัสดุ (.CSV Excel)
+            </a>
+        </div>
         {% endif %}
 
-        <!-- ส่วนสืบค้นข้อมูล -->
         <div class="text-center mb-5">
             <h1 class="fw-bold mb-2">📦 คลังข้อมูลส่วนประกอบอิเล็กทรอนิกส์</h1>
             <p class="text-muted">สืบค้นสเปก รายละเอียดชิ้นส่วน และข้อมูลทางเทคนิคได้อย่างรวดเร็ว</p>
 
             <form action="/" method="GET" class="d-flex gap-2 justify-content-center mt-4" style="max-width: 600px; margin: 0 auto;">
-                {% if is_admin %}<input type="hidden" name="pw" value="{{ pw }}"><input type="hidden" name="admin" value="true">{% endif %}
                 <input type="text" name="search" class="form-control rounded-pill px-4 shadow-sm" placeholder="🔍 พิมพ์ชื่อเบอร์ IC หรือหมวดหมู่เพื่อค้นหา..." value="{{ search_query }}">
                 <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" style="background-color: #0ea5e9; border: none;">ค้นหา</button>
             </form>
         </div>
 
-        <!-- ปุ่มตัวกรองหมวดหมู่สินค้าด่วน -->
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
-            <a href="/{% if is_admin %}?pw={{ pw }}&admin=true{% endif %}" class="btn rounded-pill px-3 fw-bold btn-sm {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ทั้งหมด</a>
+            <a href="/" class="btn rounded-pill px-3 fw-bold btn-sm {% if not current_category %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if not current_category %}background-color: #0ea5e9; border:none;{% endif %}">ทั้งหมด</a>
             {% for cat in categories %}
-                <a href="/?category={{ cat }}{% if is_admin %}&pw={{ pw }}&admin=true{% endif %}" class="btn rounded-pill px-3 fw-bold btn-sm {% if current_category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if current_category == cat %}background-color: #0ea5e9; border:none;{% endif %}">{{ cat }}</a>
+                <a href="/?category={{ cat }}" class="btn rounded-pill px-3 fw-bold btn-sm {% if current_category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}" style="{% if current_category == cat %}background-color: #0ea5e9; border:none;{% endif %}">{{ cat }}</a>
             {% endfor %}
         </div>
 
-        <!-- การ์ดรายการสินค้า -->
         <div class="row g-4 mb-5">
             {% if products %}
                 {% for product in products %}
                 <div class="col-md-4 col-sm-6">
                     <div class="card h-100 shadow-sm p-2">
 
-                        <!-- 🛠️ [ADMIN ONLY] ปุ่มแก้ไขและลบสินค้า -->
                         {% if is_admin %}
                         <div class="admin-actions">
-                            <a href="/edit/{{ product.id }}?pw={{ pw }}" class="btn btn-warning btn-sm rounded-circle shadow" title="แก้ไข">✏️</a>
-                            <a href="/delete/{{ product.id }}?pw={{ pw }}" class="btn btn-danger btn-sm rounded-circle shadow" title="ลบ" onclick="return confirm('ต้องการลบชิ้นส่วนนี้?')">🗑️</a>
+                            <a href="/edit/{{ product.id }}" class="btn btn-warning btn-sm rounded-circle shadow" title="แก้ไข">✏️</a>
+                            <a href="/delete/{{ product.id }}" class="btn btn-danger btn-sm rounded-circle shadow" title="ลบ" onclick="return confirm('ต้องการลบชิ้นส่วนนี้?')">🗑️</a>
                         </div>
                         {% endif %}
 
                         <img src="{{ product.image_url }}" class="card-img-top rounded p-2" id="prod-img-{{ product.id }}" alt="{{ product.name }}" style="height: 180px; object-fit: contain; background: #f8fafc;">
                         <div class="card-body d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="badge bg-light text-primary border border-primary-subtle">{{ product.category }}</span>
+                                <span class="badge bg-light text-primary border border-primary-subtle" id="prod-cat-{{ product.id }}">{{ product.category }}</span>
                                 <span class="small fw-bold text-secondary">
                                     {% if (product.stock or 0) >= 15 %}
                                         <span class="indicator bg-success-dot"></span>คลัง: {{ product.stock or 0 }} ชิ้น
@@ -166,15 +174,20 @@
                                 </span>
                             </div>
                             <h4 class="card-title mb-2 text-dark" id="prod-name-{{ product.id }}">{{ product.name }}</h4>
+
+                            <div class="d-none" id="prod-desc-{{ product.id }}">{{ product.description }}</div>
+                            <div class="d-none" id="prod-specs-{{ product.id }}">{{ product.specs }}</div>
+                            <div class="d-none" id="prod-ds-{{ product.id }}">{{ product.datasheet_url or '' }}</div>
+                            <div class="d-none" id="prod-stocknum-{{ product.id }}">{{ product.stock or 0 }}</div>
+
                             <p class="card-text text-muted text-truncate mb-3">{{ product.description }}</p>
 
-                            <!-- 🛠️ [ADMIN ONLY] ปุ่มปรับเพิ่มลดจำนวนสต็อก -->
                             {% if is_admin %}
                             <div class="d-flex gap-1 align-items-center mb-3 justify-content-center border-top border-bottom py-2">
                                 <span class="small text-muted me-2">ปรับคลัง:</span>
-                                <a href="/update_stock/{{ product.id }}/decrease?pw={{ pw }}" class="btn btn-outline-danger btn-sm rounded-circle fw-bold {% if (product.stock or 0) <= 0 %}disabled{% endif %}" style="width: 28px; height: 28px; line-height: 12px;">-</a>
+                                <a href="/update_stock/{{ product.id }}/decrease" class="btn btn-outline-danger btn-sm rounded-circle fw-bold {% if (product.stock or 0) <= 0 %}disabled{% endif %}" style="width: 28px; height: 28px; line-height: 12px;">-</a>
                                 <span class="fw-bold mx-2">{{ product.stock or 0 }}</span>
-                                <a href="/update_stock/{{ product.id }}/increase?pw={{ pw }}" class="btn btn-outline-success btn-sm rounded-circle fw-bold" style="width: 28px; height: 28px; line-height: 12px;">+</a>
+                                <a href="/update_stock/{{ product.id }}/increase" class="btn btn-outline-success btn-sm rounded-circle fw-bold" style="width: 28px; height: 28px; line-height: 12px;">+</a>
                             </div>
                             {% endif %}
 
@@ -183,10 +196,9 @@
                             </div>
                             <div class="row g-2 mt-2 bg-transparent">
                                 <div class="col-5 bg-transparent">
-                                    <a href="/product/{{ product.id }}{% if is_admin %}?pw={{ pw }}{% endif %}" class="btn btn-view btn-sm w-100 py-2">รายละเอียด</a>
+                                    <button class="btn btn-view btn-sm w-100 py-2" onclick="openDetailModal('{{ product.id }}')">รายละเอียด</button>
                                 </div>
                                 <div class="col-7 bg-transparent">
-                                    <!-- 🛒 ปุ่มเพิ่มเข้าตะกร้า (ถ้าสต็อกหมด ปุ่มจะกลายเป็นสีเทาและกดใช้งานไม่ได้) -->
                                     {% if (product.stock or 0) > 0 %}
                                         <button class="btn btn-buy-now btn-sm w-100 py-2" onclick="addToCart('{{ product.id }}', '{{ product.stock }}')">🛒 ใส่ตะกร้า</button>
                                     {% else %}
@@ -199,38 +211,23 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="text-center my-5 py-5 w-100">
-                    <h3 class="text-muted">❌ ไม่พบส่วนประกอบอิเล็กทรอนิกส์ในกลุ่มนี้</h3>
-                </div>
+                <div class="text-center my-5 py-5 w-100"><h3 class="text-muted">❌ ไม่พบส่วนประกอบอิเล็กทรอนิกส์ในกลุ่มนี้</h3></div>
             {% endif %}
         </div>
 
-        <!-- 📋 [ADMIN ONLY] บันทึกประวัติ Logs -->
         {% if is_admin %}
         <div class="log-box shadow-sm">
             <h5 class="fw-bold mb-3 text-secondary">📋 บันทึกประวัติการจัดการคลังล่าสุด (Admin Stock Logs)</h5>
             <div class="table-responsive">
                 <table class="table table-hover table-sm m-0 small text-secondary">
-                    <thead class="table-light">
-                        <tr>
-                            <th>เวลาจัดทำกิจกรรม</th>
-                            <th>รายการเบอร์ IC</th>
-                            <th>กิจกรรมการดำเนินงาน</th>
-                        </tr>
-                    </thead>
+                    <thead class="table-light"><tr><th>เวลาจัดทำกิจกรรม</th><th>รายการเบอร์ IC</th><th>กิจกรรมการดำเนินงาน</th></tr></thead>
                     <tbody>
                         {% if logs %}
                             {% for log in logs %}
-                            <tr>
-                                <td><code>{{ log.timestamp }}</code></td>
-                                <td class="fw-bold text-dark">{{ log.component_name }}</td>
-                                <td>{{ log.action_type }}</td>
-                            </tr>
+                            <tr><td><code>{{ log.timestamp }}</code></td><td class="fw-bold text-dark">{{ log.component_name }}</td><td>{{ log.action_type }}</td></tr>
                             {% endfor %}
                         {% else %}
-                            <tr>
-                                <td colspan="3" class="text-center py-2 text-muted">ยังไม่มีประวัติการปรับจำนวนสต็อกสินค้าในเวลานี้</td>
-                            </tr>
+                            <tr><td colspan="3" class="text-center py-2 text-muted">ยังไม่มีประวัติการปรับจำนวนสต็อกสินค้าในเวลานี้</td></tr>
                         {% endif %}
                     </tbody>
                 </table>
@@ -240,66 +237,51 @@
 
     </div>
 
-    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- 🛒 JavaScript สำหรับจัดการตะกร้าสินค้าแบบ Client-side และส่งเช็คเอาท์ไปหักหลังบ้าน -->
     <script>
-        // โหลดข้อมูลตะกร้าที่เคยเลือกไว้เดิม (ถ้ามี)
         let cart = JSON.parse(localStorage.getItem('electrohub_cart')) || [];
         updateCartUI();
 
-        // 1. ฟังก์ชันเพิ่มสินค้าลงตะกร้าพร้อมจำกัดการซื้อตามสต็อกที่มีจริง
         function addToCart(id, maxStock) {
             maxStock = parseInt(maxStock);
             let productInCart = cart.find(item => item.id === id);
 
             if (productInCart) {
-                // ถ้าในตะกร้ามีสินค้านี้อยู่แล้ว และจะกดซื้อเพิ่ม
                 if (productInCart.qty >= maxStock) {
-                    alert(`ขออภัย! ไม่สามารถใส่เพิ่มได้แล้ว เนื่องจากคุณสั่งซื้อครบจำนวนสินค้าในคลังที่มีสูงสุดแล้ว (${maxStock} ชิ้น)`);
+                    alert(`ขออภัย! ไม่สามารถสั่งเพิ่มได้ เนื่องจากคลังออนไลน์มีสินค้าชิ้นนี้อยู่สูงสุดเพียง ${maxStock} ชิ้นเท่านั้น`);
                     return;
                 }
                 productInCart.qty += 1;
             } else {
-                // ถ้ายังไม่มีชิ้นนี้ในตะกร้า ให้ดึงข้อมูลมาสร้าง Item ใหม่
                 let name = document.getElementById(`prod-name-${id}`).innerText;
                 let img = document.getElementById(`prod-img-${id}`).src;
                 let priceText = document.getElementById(`prod-price-${id}`).innerText;
-                // ดึงตัวเลขจากคำว่า "ราคา: 50 บาท"
                 let priceNum = parseInt(priceText.replace(/[^0-9]/g, '')) || 0;
 
-                cart.push({
-                    id: id,
-                    name: name,
-                    img: img,
-                    price: priceNum,
-                    maxStock: maxStock,
-                    qty: 1
-                });
+                cart.push({ id: id, name: name, img: img, price: priceNum, maxStock: maxStock, qty: 1 });
             }
-
             saveCartAndRefresh();
-
-            // เปิดแถบ Sidebar ตะกร้าสินค้าด้านข้างให้ดูทันทีเพื่อความสะดวก
-            var offcanvasElement = document.getElementById('cartSidebar');
-            var offcanvas = new bootstrap.Offcanvas(offcanvasElement);
-            offcanvas.show();
+            new bootstrap.Offcanvas(document.getElementById('cartSidebar')).show();
         }
 
-        // 2. ลบสินค้าออกจากตะกร้า
+        function clearCart() {
+            if (confirm('คุณต้องการเคลียร์สินค้าทั้งหมดออกจากตะกร้าใช่หรือไม่?')) {
+                cart = [];
+                saveCartAndRefresh();
+            }
+        }
+
         function removeFromCart(id) {
             cart = cart.filter(item => item.id !== id);
             saveCartAndRefresh();
         }
 
-        // 3. ปรับเปลี่ยนจำนวนชิ้นในหน้าตะกร้าโดยตรง
         function changeQty(id, action) {
             let item = cart.find(i => i.id === id);
             if (item) {
                 if (action === 'increase') {
                     if (item.qty >= item.maxStock) {
-                        alert(`ไม่สามารถเพิ่มได้เกิน ${item.maxStock} ชิ้น ซึ่งเป็นยอดสูงสุดที่คลังออนไลน์มี`);
+                        alert(`ไม่สามารถเพิ่มได้เกิน ${item.maxStock} ชิ้นตามสต็อกจริงได้`);
                         return;
                     }
                     item.qty += 1;
@@ -314,34 +296,33 @@
             }
         }
 
-        // 4. บันทึกค่าลงหน่วยความจำชั่วคราวและอัปเดตหน้าตาเว็บ
         function saveCartAndRefresh() {
             localStorage.setItem('electrohub_cart', JSON.stringify(cart));
             updateCartUI();
         }
 
-        // 5. วาดหน้ารายการสินค้าในตะกร้าใหม่ทุกครั้งที่มีการกดซื้อ
         function updateCartUI() {
             let listContainer = document.getElementById('cartItemsList');
             let badge = document.getElementById('cartCountBadge');
             let checkoutBtn = document.getElementById('checkoutBtn');
+            let clearBtn = document.getElementById('clearCartBtn');
             let totalLabel = document.getElementById('cartTotalPrice');
 
             let totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
             let totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
-            // อัปเดตตัวเลขแจ้งเตือนจำนวนสินค้าบน Navbar
             if (totalQty > 0) {
                 badge.innerText = totalQty;
                 badge.classList.remove('d-none');
                 checkoutBtn.classList.remove('d-none');
+                clearBtn.classList.remove('d-none');
             } else {
                 badge.classList.add('d-none');
                 checkoutBtn.classList.add('d-none');
+                clearBtn.classList.add('d-none');
             }
 
             totalLabel.innerText = totalPrice + ' บาท';
-
             if (cart.length === 0) {
                 listContainer.innerHTML = '<p class="text-muted text-center my-5">ไม่มีสินค้าในตะกร้าขณะนี้</p>';
                 return;
@@ -371,44 +352,85 @@
             listContainer.innerHTML = html;
         }
 
-        // 6. ฟังก์ชันส่งค่าตะกร้าไปยังเซิร์ฟเวอร์หลังบ้านเพื่อตัดสต็อกจริงในคลังออนไลน์
+        function openDetailModal(id) {
+            let name = document.getElementById(`prod-name-${id}`).innerText;
+            let img = document.getElementById(`prod-img-${id}`).src;
+            let cat = document.getElementById(`prod-cat-${id}`).innerText;
+            let price = document.getElementById(`prod-price-${id}`).innerText;
+            let desc = document.getElementById(`prod-desc-${id}`).innerText;
+            let specsRaw = document.getElementById(`prod-specs-${id}`).innerText;
+            let dsUrl = document.getElementById(`prod-ds-${id}`).innerText;
+            let stockNum = parseInt(document.getElementById(`prod-stocknum-${id}`).innerText) || 0;
+
+            document.getElementById('modalName').innerText = name;
+            document.getElementById('modalImg').src = img;
+            document.getElementById('modalCategory').innerText = cat;
+            document.getElementById('modalPrice').innerText = price;
+            document.getElementById('modalDescription').innerText = desc;
+
+            let stockBadge = document.getElementById('modalStockBadge');
+            if (stockNum >= 15) {
+                stockBadge.className = "p-1 px-3 rounded small d-inline-block fw-bold mb-3 text-success bg-success-subtle";
+                stockBadge.innerText = `📦 คลังพร้อมจ่าย: ${stockNum} ชิ้น`;
+            } else if (stockNum > 0) {
+                stockBadge.className = "p-1 px-3 rounded small d-inline-block fw-bold mb-3 text-warning bg-warning-subtle";
+                stockBadge.innerText = `⚠️ อะไหล่ใกล้หมด: เหลือ ${stockNum} ชิ้น`;
+            } else {
+                stockBadge.className = "p-1 px-3 rounded small d-inline-block fw-bold mb-3 text-danger bg-danger-subtle";
+                stockBadge.innerText = `❌ สินค้าหมดคลังชั่วคราว`;
+            }
+
+            let dsBtn = document.getElementById('modalDatasheet');
+            if (dsUrl && dsUrl.trim() !== '') {
+                dsBtn.href = dsUrl;
+                dsBtn.classList.remove('d-none');
+            } else {
+                dsBtn.classList.add('d-none');
+            }
+
+            let specsContainer = document.getElementById('modalSpecsList');
+            specsContainer.innerHTML = '';
+            if (specsRaw) {
+                specsRaw.split(',').forEach(spec => {
+                    if (spec.trim() !== '') {
+                        let div = document.createElement('div');
+                        div.className = "spec-badge";
+                        div.innerText = `✔️ ${spec.trim()}`;
+                        specsContainer.appendChild(div);
+                    }
+                });
+            }
+            new bootstrap.Modal(document.getElementById('productDetailModal')).show();
+        }
+
         function processCheckout() {
             if (cart.length === 0) return;
-
-            if (!confirm('ยืนยันคำสั่งซื้อเพื่อเบิกอะไหล่ออกจากสต็อกออนไลน์?')) return;
+            if (!confirm('ยืนยันรายการเพื่อสั่งซื้อและตัดสต็อกสินค้าออกจากระบบจำลองคลังออนไลน์?')) return;
 
             document.getElementById('checkoutBtn').disabled = true;
-            document.getElementById('checkoutBtn').innerText = 'กำลังประมวลผลสต็อก...';
+            document.getElementById('checkoutBtn').innerText = 'กำลังบันทึกสต็อกหลังบ้าน...';
 
             fetch('/checkout', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cart: cart })
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     alert(data.message);
-                    // สั่งเคลียร์ตะกร้าสินค้าเมื่อกดซื้อสำเร็จ
                     cart = [];
                     saveCartAndRefresh();
-
-                    // ปิด Sidebar ตะกร้า และรีโหลดหน้าเพื่ออัปเดตสถิติคลังออนไลน์ใหม่
-                    var offcanvasElement = document.getElementById('cartSidebar');
-                    var offcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
-                    if (offcanvas) offcanvas.hide();
-
+                    bootstrap.Offcanvas.getInstance(document.getElementById('cartSidebar')).hide();
                     location.reload();
                 } else {
-                    alert('ไม่สามารถทำการสั่งซื้อได้: ' + data.message);
+                    alert('คำสั่งซื้อล้มเหลว: ' + data.message);
                     document.getElementById('checkoutBtn').disabled = false;
                     document.getElementById('checkoutBtn').innerText = '💳 ยืนยันคำสั่งซื้อ (และตัดสต็อก)';
                 }
             })
             .catch(err => {
-                alert('เกิดข้อผิดพลาดในการเช็คเอาท์สต็อก: ' + err);
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อสต็อกคลาวด์: ' + err);
                 document.getElementById('checkoutBtn').disabled = false;
                 document.getElementById('checkoutBtn').innerText = '💳 ยืนยันคำสั่งซื้อ (และตัดสต็อก)';
             });
