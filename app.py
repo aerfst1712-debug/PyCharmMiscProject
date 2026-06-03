@@ -493,9 +493,10 @@ def import_report():
     for row in csv_input:
         if not row: continue
         conn.execute('''
-                     INSERT INTO components (id, name, category, price, image_url, description, specs, stock, datasheet_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]))
+                     INSERT INTO components (id, name, category, price, image_url, description, specs, stock,
+                                             datasheet_url)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     ''', (row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]))
 
     now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
     conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
