@@ -16,7 +16,7 @@
 
     <div class="container my-5">
         <div class="mb-4">
-            <a href="/" class="btn btn-outline-secondary btn-sm rounded-pill">⬅ กลับหน้าหลัก</a>
+            <a href="/" class="btn btn-outline-secondary btn-sm rounded-pill text-decoration-none">⬅ กลับหน้าหลัก</a>
         </div>
 
         <div class="form-box p-4 p-md-5 shadow-sm">
@@ -36,15 +36,14 @@
                         <input type="text" name="category" class="form-control" value="{{ product.category }}" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold text-secondary">ราคาขายสินค้า (Price)</label>
-                        <input type="text" name="price" class="form-control" value="{{ product.price }}" required>
+                        <label class="form-label fw-bold text-secondary">ราคาขายสินค้า (เฉพาะตัวเลขหน่วยบาท)</label>
+                        <input type="number" name="price" class="form-control" value="{{ product.price }}" min="0" required>
                     </div>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label fw-bold text-primary">🔢 ปริมาณสต็อกสินค้าปัจจุบัน (Stock Number)</label>
-                    <input type="number" name="stock" class="form-control border-primary" min="0" value="{{ product.stock or 0 }}" step="1" title="กรุณากรอกตัวเลขจำนวนเต็มบวกตั้งแต่ 0 ขึ้นไปเท่านั้น" required>
-                    <div class="form-text text-muted">ระบบล็อกห้ามป้อนตัวอักษรหรือค่าติดลบเพื่อความปลอดภัยของระบบฐานข้อมูล</div>
+                    <input type="number" name="stock" class="form-control border-primary" min="0" value="{{ product.stock or 0 }}" step="1" required>
                 </div>
 
                 <div class="mb-3">
@@ -58,13 +57,13 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold text-secondary">คำอธิบายภาพรวม/หน้าที่การทำงานหลัก (Description)</label>
+                    <label class="form-label fw-bold text-secondary">คำอธิบายหน้าที่การทำงานหลัก (Description)</label>
                     <textarea name="description" class="form-control" rows="3" required>{{ product.description }}</textarea>
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label fw-bold text-secondary">คุณสมบัติทางเทคนิค (Specs) <small class="text-danger">*ใช้เครื่องหมายจุลภาค ( , ) คั่นแต่ละสเปก</small></label>
-                    <input type="text" name="specs" class="form-control" value="{{ product.specs }}" required>
+                    <label class="form-label fw-bold text-secondary">คุณสมบัติทางเทคนิค (Specs) <small class="text-primary">*พิมพ์ 1 คุณสมบัติ ต่อ 1 บรรทัด</small></label>
+                    <textarea name="specs" class="form-control" rows="3" required>{{ product.specs }}</textarea>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100 py-2.5 rounded-pill fw-bold fs-5" style="background-color: #0ea5e9; border: none;">💾 อัปเดตการแก้ไขข้อมูลคลังพัสดุ</button>
