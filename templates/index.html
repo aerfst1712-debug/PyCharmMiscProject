@@ -53,7 +53,8 @@
                 </form>
                 {% else %}
                     <span class="badge bg-danger rounded-pill px-2.5 py-1.5 small fw-bold">👷 Admin Mode</span>
-                    <a href="/add" class="btn btn-success btn-sm rounded-pill px-2.5 fw-bold text-decoration-none">➕ เพิ่มสินค้า</a>
+                    <a href="/add" class="btn btn-success btn-sm rounded-pill px-2.5 fw-bold text-decoration-none text-white me-1">➕ เพิ่มสินค้า</a>
+                    <a href="/export_report" class="btn btn-primary btn-sm rounded-pill px-2.5 fw-bold text-decoration-none text-white me-1">📊 ออกรายงาน Excel</a>
                     <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-2.5 text-decoration-none">ออก 🚪</a>
                 {% endif %}
             </div>
@@ -106,31 +107,31 @@
             <div class="col-md-2 col-6">
                 <div class="stat-card">
                     <div class="text-muted small fw-bold">📦 จำนวนรายการ</div>
-                    <div class="stat-num text-dark">{{ total_items }}</div>
+                    <div class="stat-num text-dark">{{ total_items | default(0) }}</div>
                 </div>
             </div>
             <div class="col-md-2 col-6">
                 <div class="stat-card">
                     <div class="text-muted small fw-bold">🔢 ยอดพัสดุรวม</div>
-                    <div class="stat-num text-primary">{{ total_stock }}</div>
+                    <div class="stat-num text-primary">{{ total_stock | default(0) }}</div>
                 </div>
             </div>
             <div class="col-md-3 col-12">
                 <div class="stat-card border-success" style="background-color: #f0fdf4;">
                     <div class="text-muted small fw-bold text-success">💰 มูลค่ารวมของคลังสินค้า</div>
-                    <div class="stat-num text-success" style="font-size: 1.8rem;">{{ "{:,}".format(total_warehouse_value) }} บาท</div>
+                    <div class="stat-num text-success" style="font-size: 1.8rem;">{{ "{:,}".format(total_warehouse_value | default(0)) }} บาท</div>
                 </div>
             </div>
             <div class="col-md-2 col-6">
                 <div class="stat-card border-warning" style="background-color: #fffdf5;">
                     <div class="text-muted small fw-bold text-warning">⚠️ ใกล้หมดคลัง</div>
-                    <div class="stat-num text-warning">{{ low_stock_count }}</div>
+                    <div class="stat-num text-warning">{{ low_stock_count | default(0) }}</div>
                 </div>
             </div>
             <div class="col-md-3 col-6">
                 <div class="stat-card border-danger" style="background-color: #fff5f5;">
                     <div class="text-muted small fw-bold text-danger">🚨 สินค้าหมดสต็อกคลัง</div>
-                    <div class="stat-num text-danger">{{ out_of_stock_count }}</div>
+                    <div class="stat-num text-danger">{{ out_of_stock_count | default(0) }}</div>
                 </div>
             </div>
         </div>
@@ -212,7 +213,7 @@
                                     <span class="fw-bold text-primary">📄 บิลใบเบิก #{{ order.id }}</span><br>
                                     <small class="text-muted">📅 {{ order.order_date }}</small>
                                 </div>
-                                <span class="badge bg-success-subtle text-success rounded-pill fw-bold">{{ "{:,}".format(order.total_price) }} บาท 🔍</span>
+                                <span class="badge bg-success-subtle text-success rounded-pill fw-bold">{{ "{:,}".format(order.total_price | default(0)) }} บาท 🔍</span>
                             </a>
                             {% endfor %}
                         {% else %}
@@ -273,7 +274,8 @@
             } else {
                 let name = document.getElementById(`prod-name-${id}`).innerText;
                 let img = document.getElementById(`prod-img-${id}`).src;
-                let priceNum = parseInt(document.getElementById(`prod-price-${id}`).innerText) || 0;
+                let priceRaw = document.getElementById(`prod-price-${id}`).innerText;
+                let priceNum = parseInt(priceRaw.replace(/[^0-9]/g, '')) || 0;
                 cart.push({ id: id, name: name, img: img, price: priceNum, maxStock: maxStock, qty: 1 });
             }
             saveCartAndRefresh();
