@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, abort, jso
 import sqlite3
 import csv
 import io
+import os
 from datetime import datetime
 
 app = Flask(__name__)
@@ -32,23 +33,10 @@ def update_db_structure():
     conn.execute('''
                  CREATE TABLE IF NOT EXISTS stock_logs
                  (
-                     id
-                     INTEGER
-                     PRIMARY
-                     KEY
-                     AUTOINCREMENT,
-                     component_name
-                     TEXT
-                     NOT
-                     NULL,
-                     action_type
-                     TEXT
-                     NOT
-                     NULL,
-                     timestamp
-                     TEXT
-                     NOT
-                     NULL
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     component_name TEXT NOT NULL,
+                     action_type TEXT NOT NULL,
+                     timestamp TEXT NOT NULL
                  )
                  ''')
     conn.commit()
@@ -101,21 +89,26 @@ def home():
 
     products = [dict(row) for row in cursor.fetchall()]
 
-    total_items = total_stock = low_stock_count = out_of_stock_count = 0
+    # ✨ [แก้ไข] ตั้งค่าเริ่มต้นให้ตัวแปรเป็นตัวเลขและลิสต์ที่ถูกต้อง เพื่อป้องกัน Jinja2 ทำงานผิดพลาดตอนไม่ได้ Login
+    total_items = 0
+    total_stock = 0
+    low_stock_count = 0
+    out_of_stock_count = 0
     logs = []
 
-    if is_admin:
-        total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0]
+    # ดึงสถิติเสมอ (หรือจะดึงเฉพาะตอนเป็น Admin ก็ได้ แต่การให้มีค่าตัวเลข 0 หรือของจริงชัวร์สุด ช่วยลด Error ใน HTML)
+    try:
+        total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0] or 0
         total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
         total_stock = total_stock_res if total_stock_res is not None else 0
-        low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0]
-        out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0]
+        low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0] or 0
+        out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0] or 0
 
-        try:
+        if is_admin:
             log_cursor = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 10')
             logs = log_cursor.fetchall()
-        except sqlite3.OperationalError:
-            logs = []
+    except sqlite3.OperationalError:
+        pass
 
     conn.close()
     return render_template('index.html',
@@ -324,19 +317,14 @@ def export_report():
     rows = cursor.fetchall()
     conn.close()
 
-    # สร้างบัฟเฟอร์หน่วยความจำชั่วคราวในการเขียนตารางข้อมูลเพื่อส่งออกไฟล์
     output = io.StringIO()
     writer = csv.writer(output)
-
-    # เขียนหัวคอลัมน์ของตารางข้อมูลรายงาน (รองรับภาษาไทย)
     writer.writerow(['ID อุปกรณ์', 'ชื่ออะไหล่ชิ้นส่วน', 'หมวดหมู่', 'ราคาต่อชิ้น', 'คงเหลือในสต็อกจริง'])
 
     for row in rows:
         writer.writerow([row['id'], row['name'], row['category'], row['price'], row['stock']])
 
-    # เข้ารหัสให้ไฟล์มี BOM (Byte Order Mark) ของ UTF-8 เพื่อบังคับให้ Excel อ่านอักษรภาษาไทยได้ถูกต้อง ไม่เพี้ยนเป็นต่างดาว
     csv_data = "\ufeff" + output.getvalue()
-
     now_date = datetime.now().strftime('%Y%m%d')
     return Response(
         csv_data,
@@ -372,4 +360,6 @@ def reset_db():
 
 if __name__ == '__main__':
     update_db_structure()
-    app.run(debug=True)
+    # ✨ [แก้ไข] ปรับเพื่อให้ Render ดึง Port ไปรันบน Cloud ได้อย่างไม่มีปัญหา
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
