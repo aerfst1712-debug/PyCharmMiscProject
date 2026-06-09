@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.secret_key = 'electrohub_labs_super_secret_key_999'
 
 DATABASE = 'electronics.db'
-ADMIN_PASSWORD = '1234'  # รหัสผ่านหลักของแอดมิน
+ADMIN_PASSWORD = '1111'  # รหัสผ่านหลักของแอดมิน
 
 
 def get_db():
