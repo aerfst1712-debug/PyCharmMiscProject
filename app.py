@@ -6,7 +6,6 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-# 🔑 ต้องตั้งรหัสลับ Secret Key เพื่อใช้เข้ารหัสระบบคุกกี้ Session ป้องกันการปลอมแปลงสิทธิ์
 app.secret_key = 'electrohub_labs_super_secret_key_999'
 
 DATABASE = 'electronics.db'
@@ -30,13 +29,51 @@ def update_db_structure():
     except sqlite3.OperationalError:
         pass
 
+    # สร้างตารางประวัติกิจกรรมสต็อก
     conn.execute('''
                  CREATE TABLE IF NOT EXISTS stock_logs
                  (
-                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                     component_name TEXT NOT NULL,
-                     action_type TEXT NOT NULL,
-                     timestamp TEXT NOT NULL
+                     id
+                     INTEGER
+                     PRIMARY
+                     KEY
+                     AUTOINCREMENT,
+                     component_name
+                     TEXT
+                     NOT
+                     NULL,
+                     action_type
+                     TEXT
+                     NOT
+                     NULL,
+                     timestamp
+                     TEXT
+                     NOT
+                     NULL
+                 )
+                 ''')
+
+    # ✨ สร้างตารางบิลคำสั่งซื้อ/ใบเบิกคลัง เพื่อรองรับโค้ดบนหน้า HTML
+    conn.execute('''
+                 CREATE TABLE IF NOT EXISTS orders
+                 (
+                     id
+                     INTEGER
+                     PRIMARY
+                     KEY
+                     AUTOINCREMENT,
+                     total_price
+                     INTEGER
+                     NOT
+                     NULL,
+                     order_date
+                     TEXT
+                     NOT
+                     NULL,
+                     items_json
+                     TEXT
+                     NOT
+                     NULL
                  )
                  ''')
     conn.commit()
@@ -54,16 +91,28 @@ def update_db_structure():
              'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา', 4,
              'https://docs.arduino.cc/resources/datasheets/A000066-datasheet-pdf')
         ]
+
+        # แปลงโครงสร้างราคาให้เป็นตัวเลขเพียวๆ เพื่อนำไปคำนวณมูลค่าคลังสินค้าได้
+        clean_components = [
+            ('IC LM358', 'Integrated Circuit', '50', 'https://th.rs-online.com/images/F4852924-01.jpg',
+             'ไอซีขยายสัญญาณ Low Power Dual Operational Amplifier นิยมใช้ในวงจรกรองสัญญาณและวงจรเปรียบเทียบแรงดัน',
+             'ขาใช้งาน: 8 พิน, แรงดันไฟเลี้ยง: 3V ถึง 32V, จำนวนช่องสัญญาณ: 2 ช่อง', 100,
+             'https://www.ti.com/lit/ds/symlink/lm358.pdf'),
+            ('Arduino Uno R3', 'Microcontroller', '250',
+             'https://docs.arduino.cc/static/29849b29d499ec249f056bc293d07ec5/A000066_featured.jpg',
+             'บอร์ดไมโครคอนโทรลเลอร์โอเพนซอร์สยอดนิยมสำหรับเรียนรู้และพัฒนาระบบฝังตัว วงจรอิเล็กทรอนิกส์ และหุ่นยนต์',
+             'ชิปหลัก: ATmega328P, แรงดันใช้งาน: 5V, ขา Digital I/O: 14 ขา, ขา Analog Input: 6 ขา', 4,
+             'https://docs.arduino.cc/resources/datasheets/A000066-datasheet-pdf')
+        ]
         conn.executemany('''
                          INSERT INTO components (name, category, price, image_url, description, specs, stock,
                                                  datasheet_url)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                         ''', default_components)
+                         ''', clean_components)
         conn.commit()
     conn.close()
 
 
-# 🔒 ฟังก์ชันเช็คสิทธิ์แอดมินผ่าน Session ชั่วคราวบนเว็บ
 def is_logged_in_admin():
     return session.get('is_admin') == True
 
@@ -89,24 +138,42 @@ def home():
 
     products = [dict(row) for row in cursor.fetchall()]
 
-    # ✨ [แก้ไข] ตั้งค่าเริ่มต้นให้ตัวแปรเป็นตัวเลขและลิสต์ที่ถูกต้อง เพื่อป้องกัน Jinja2 ทำงานผิดพลาดตอนไม่ได้ Login
+    # ✨ ปรับปรุงให้มีตัวแปรเริ่มต้นสถิติต่างๆ ครบถ้วน ป้องกัน Jinja2 แสดงผลผิดพลาด
     total_items = 0
     total_stock = 0
+    total_warehouse_value = 0
     low_stock_count = 0
     out_of_stock_count = 0
     logs = []
+    recent_orders = []
 
-    # ดึงสถิติเสมอ (หรือจะดึงเฉพาะตอนเป็น Admin ก็ได้ แต่การให้มีค่าตัวเลข 0 หรือของจริงชัวร์สุด ช่วยลด Error ใน HTML)
     try:
         total_items = conn.execute('SELECT COUNT(*) FROM components').fetchone()[0] or 0
         total_stock_res = conn.execute('SELECT SUM(stock) FROM components').fetchone()[0]
         total_stock = total_stock_res if total_stock_res is not None else 0
-        low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[0] or 0
+        low_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock < 5 AND stock > 0').fetchone()[
+                              0] or 0
         out_of_stock_count = conn.execute('SELECT COUNT(*) FROM components WHERE stock == 0').fetchone()[0] or 0
+
+        # ✨ ฟังก์ชันคำนวณมูลค่าสินค้ารวมทั้งหมดในโกดัง (ราคาชิ้นส่วน x จำนวนชิ้นในสต็อก)
+        all_comps = conn.execute('SELECT price, stock FROM components').fetchall()
+        for comp in all_comps:
+            try:
+                # ล้างอักขระที่ไม่ใช่ตัวเลขออกเผื่อมีการใส่คำว่า "บาท" ไว้ในตัวฐานข้อมูลเก่า
+                price_clean = ''.join(c for c in str(comp['price']) if c.isdigit() or c == '.')
+                price_val = float(price_clean) if price_clean else 0.0
+                total_warehouse_value += int(price_val * (comp['stock'] or 0))
+            except ValueError:
+                pass
 
         if is_admin:
             log_cursor = conn.execute('SELECT * FROM stock_logs ORDER BY id DESC LIMIT 10')
             logs = log_cursor.fetchall()
+
+            # ดึงประวัติใบเบิกคลังล่าสุดมาแสดงผล
+            order_cursor = conn.execute('SELECT * FROM orders ORDER BY id DESC LIMIT 10')
+            recent_orders = order_cursor.fetchall()
+
     except sqlite3.OperationalError:
         pass
 
@@ -119,23 +186,24 @@ def home():
                            current_category=category_filter,
                            total_items=total_items,
                            total_stock=total_stock,
+                           total_warehouse_value=total_warehouse_value,  # ✨ ส่งตัวแปรมูลค่าคลังสินค้าไปที่หน้าจอ
                            low_stock_count=low_stock_count,
                            out_of_stock_count=out_of_stock_count,
-                           logs=logs)
+                           logs=logs,
+                           recent_orders=recent_orders)  # ✨ ส่งข้อมูลประวัติบิล
 
 
-# 🔑 เส้นทางเข้าสู่ระบบและออกจากระบบผ่าน Session ฟอร์ม
 @app.route('/login', methods=['POST'])
 def login():
     password = request.form.get('password', '')
     if password == ADMIN_PASSWORD:
-        session['is_admin'] = True  # ฝังสถานะแอดมินเข้ารหัสลงในบราวเซอร์สำเร็จ
+        session['is_admin'] = True
     return redirect(url_for('home'))
 
 
 @app.route('/logout')
 def logout():
-    session.pop('is_admin', None)  # ล้างสถานะสิทธิ์แอดมินออกทันทีเมื่อกดออกจากระบบ
+    session.pop('is_admin', None)
     return redirect(url_for('home'))
 
 
@@ -188,7 +256,6 @@ def add_product():
         description = request.form['description']
         specs = request.form['specs']
 
-        # 🧪 Form Validation หลังบ้าน: ดักจับข้อมูลสต็อกและสเปกก่อนเซฟเข้า Database
         try:
             stock = int(request.form.get('stock', 0))
             if stock < 0: stock = 0
@@ -283,31 +350,57 @@ def checkout():
 
     conn = get_db()
     now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+    total_bill_price = 0
+    import json
+
     try:
         for item in cart_items:
             product_id = item.get('id')
             qty = int(item.get('qty', 1))
 
-            db_item = conn.execute('SELECT name, stock FROM components WHERE id = ?', (product_id,)).fetchone()
+            db_item = conn.execute('SELECT name, price, stock FROM components WHERE id = ?', (product_id,)).fetchone()
             if not db_item: return jsonify({'success': False, 'message': f'ไม่พบสินค้า ID {product_id}'}), 400
 
             current_stock = db_item['stock'] or 0
             if current_stock < qty:
-                return jsonify({'success': False,
-                                'message': f'สินค้า {db_item["name"]} เหลือไม่เพียงพอ (เหลือ {current_stock} ชิ้น)'}), 400
+                return jsonify({'success': False, 'message': f'สินค้า {db_item["name"]} เหลือไม่เพียงพอ'}), 400
+
+            # ล้างตัวเลขราคาสินค้าเพื่อคำนวณบิลยอดสั่งซื้อ
+            price_clean = ''.join(c for c in str(db_item['price']) if c.isdigit() or c == '.')
+            item_price = int(float(price_clean)) if price_clean else 0
+            total_bill_price += (item_price * qty)
 
             conn.execute('UPDATE components SET stock = stock - ? WHERE id = ?', (qty, product_id))
             conn.execute('INSERT INTO stock_logs (component_name, action_type, timestamp) VALUES (?, ?, ?)',
                          (db_item['name'], f'🛒 ลูกค้าสั่งเบิกตัดยอดคลังสินค้าจำนวน {qty} ชิ้น', now_str))
+
+        # บันทึกข้อมูลบิลเบิกลงในฐานข้อมูลตาราง orders
+        cursor = conn.execute('INSERT INTO orders (total_price, order_date, items_json) VALUES (?, ?, ?)',
+                              (total_bill_price, now_str, json.dumps(cart_items)))
+        order_id = cursor.lastrowid
+
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'message': 'สั่งซื้อตัดยอดคลังสินค้าจำลองเสร็จเรียบร้อย!'})
+        return jsonify({'success': True, 'message': 'สั่งซื้อเสร็จเรียบร้อย!', 'order_id': order_id})
     except Exception as e:
         conn.close()
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-# 📊 💾 เส้นทางใหม่: แปลงฐานข้อมูล SQLite เป็นไฟล์รายงานสรุป .CSV สำหรับเปิดใน Excel
+# ✨ เพิ่มหน้าโชว์รายละเอียดใบเบิกสินค้า (Order/Receipt View) ป้องกันเว็บขึ้น Error 404 หลังกดเบิกของ
+@app.route('/order/<int:order_id>')
+def order_detail(order_id):
+    conn = get_db()
+    order = conn.execute('SELECT * FROM orders WHERE id = ?', (order_id,)).fetchone()
+    conn.close()
+    if not order: return abort(404)
+
+    import json
+    order_dict = dict(order)
+    order_dict['items'] = json.loads(order_dict['items_json'])
+    return render_template('order.html', order=order_dict)
+
+
 @app.route('/export_report')
 def export_report():
     if not is_logged_in_admin(): return abort(403)
@@ -338,6 +431,7 @@ def reset_db():
     conn = get_db()
     conn.execute('DROP TABLE IF EXISTS components')
     conn.execute('DROP TABLE IF EXISTS stock_logs')
+    conn.execute('DROP TABLE IF EXISTS orders')
     conn.execute('''
                  CREATE TABLE components
                  (
@@ -360,6 +454,5 @@ def reset_db():
 
 if __name__ == '__main__':
     update_db_structure()
-    # ✨ [แก้ไข] ปรับเพื่อให้ Render ดึง Port ไปรันบน Cloud ได้อย่างไม่มีปัญหา
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
